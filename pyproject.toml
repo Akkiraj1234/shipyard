@@ -1,0 +1,51 @@
+[project]
+name = "shipyard"
+version = "0.1.0"
+description = "Project metadata and lifecycle manager."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+
+authors = [
+    { name = "Akhand Raj", email = "akhandraj402@gmail.com" }
+]
+
+keywords = [
+    "cli",
+    "metadata",
+    "roadmap",
+    "changelog",
+    "release",
+    "documentation",
+]
+
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Documentation",
+]
+
+dependencies = []
+
+# [project.urls]
+# Homepage = "https://github.com/AkkiRaj1234/shipyard"
+# Repository = "https://github.com/AkkiRaj1234/shipyard"
+# Issues = "https://github.com/AkkiRaj1234/shipyard/issues"
+
+[project.scripts]
+shipyard = "shipyard.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1,<10.0.0",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

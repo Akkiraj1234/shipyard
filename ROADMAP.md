@@ -18,6 +18,7 @@ These entries will be merged into the next generated release before being cleare
 > **Target:** First public release \
 > **Status:** 🚧 In Development
 
+* [ ] SHP-000 added: Implement foundation
 * [ ] SHP-001 added: Initialize a Shipyard project (`shipyard init`).
 * [ ] SHP-002 added: Generate and manage `ROADMAP.md`.
 * [ ] SHP-003 added: Generate project `CHANGELOG.md`.

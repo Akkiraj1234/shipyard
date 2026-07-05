@@ -1,0 +1,32 @@
+[SHP-000] Foundation
+
+- [ ] Implement the CLI parser. Every command passes through the parser, which resolves the command, parses arguments and flags, and dispatches execution to the command's `run()` method. The parser is not responsible for error handling.
+- [ ] Create the application bootstrap (`__init__.py`, `__main__.py`, and `cli.py`) together with the root-level exception handler.
+- [ ] Create the core modules (`error.py`, `utils.py`, and other shared infrastructure).
+- [ ] Implement the command base class/interface. Every command should expose a consistent API (for example, `run()`) and provide metadata such as its name, aliases, and help information.
+- [ ] Implement the command registry. Every command is registered here and discovered by the CLI.
+- [ ] Implement the project path resolver. It should locate the project root, resolve managed file paths, and discover the `.shipyard` directory regardless of the current working directory.
+- [ ] Define standard exit codes for the CLI to provide consistent success and error responses.
+- [ ] Implement the `version` and `help` commands. Generate command help from command docstrings and provide command suggestions for unknown commands.
+- [ ] Implement the output printer as the single interface for terminal output, including future support for colors and formatting.
+- [ ] Implement file utilities, including atomic writes, safe reads, stream reading, directory helpers, and file metadata (modification time and size).
+- [ ] Implement Markdown utilities for reading, writing, parsing, and editing Shipyard-managed Markdown documents.
+- [ ] Implement configuration loading and `.shipyard` project management.
+- [ ] Implement feature ID generation and version management.
+- [ ] Write unit tests for the foundation.
+
+------------------------------------------------------------
+
+[SHP-001] Initialize a Shipyard Project
+
+- [ ] Implement the `shipyard init` command.
+- [ ] Detect missing project files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, `ideas/`, `.shipyard/`) and create them when necessary.
+- [ ] Validate the existing project structure and repair missing or invalid Shipyard files where possible.
+- [ ] Create the `.shipyard` directory and initialize the project registry.
+- [ ] Register managed project files within `.shipyard`.
+- [ ] Update `.gitignore` by appending recommended entries (optionally allowing the user to ignore the `ideas/` directory).
+- [ ] Detect Git repositories and provide repository-specific recommendations after initialization.
+- [ ] Display a project summary together with suggested next commands.
+- [ ] Validate the initialized project and report any remaining issues.
+- [ ] Write unit tests for project initialization.
+

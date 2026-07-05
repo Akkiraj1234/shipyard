@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: Documentation",
 ]
 
-dependencies = []
+dependencies = ["blessed (>=1.46.0,<2.0.0)"]
 
 # [project.urls]
 # Homepage = "https://github.com/AkkiRaj1234/shipyard"

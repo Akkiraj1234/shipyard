@@ -1,45 +1,66 @@
 [project]
 name = "shipyard"
 version = "0.1.0"
-description = "Project metadata and lifecycle manager."
+description = "A Git-inspired project companion for managing project metadata, roadmaps, releases, and documentation."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "GPL-3.0-only"
 
 authors = [
-    { name = "Akhand Raj", email = "akhandraj402@gmail.com" }
+    { name = "Akhand Raj", email = "akhandraj402@gmail.com" },
 ]
 
 keywords = [
     "cli",
-    "metadata",
+    "developer-tools",
+    "documentation",
     "roadmap",
     "changelog",
     "release",
-    "documentation",
+    "project-management",
+    "metadata",
 ]
 
 classifiers = [
+    # Project maturity
     "Development Status :: 2 - Pre-Alpha",
-    "Environment :: Console",
+
+    # Audience
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+
+    # Environment
+    "Environment :: Console",
+
+    # License
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+
+    # Operating Systems
     "Operating System :: OS Independent",
+
+    # Python Versions
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+
+    # Topics
     "Topic :: Software Development",
+    "Topic :: Software Development :: Build Tools",
     "Topic :: Software Development :: Documentation",
+    "Topic :: Utilities",
 ]
 
-dependencies = ["blessed (>=1.46.0,<2.0.0)"]
+dependencies = [
+    "blessed>=1.46.0,<2.0.0",
+]
 
-# [project.urls]
-# Homepage = "https://github.com/AkkiRaj1234/shipyard"
-# Repository = "https://github.com/AkkiRaj1234/shipyard"
-# Issues = "https://github.com/AkkiRaj1234/shipyard/issues"
+[project.urls]
+Homepage = "https://github.com/AkkiRaj1234/shipyard"
+Repository = "https://github.com/AkkiRaj1234/shipyard"
+Issues = "https://github.com/AkkiRaj1234/shipyard/issues"
 
 [project.scripts]
-shipyard = "shipyard.cli:main"
+shipyard = "shipyard.main:main"
 
 [dependency-groups]
 dev = [

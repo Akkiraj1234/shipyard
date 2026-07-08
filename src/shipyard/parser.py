@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 from enum import IntEnum
 import sys
@@ -99,27 +99,6 @@ registry = {
 }
 
 
-
-
-
-def Tokenizer(tokens: List[str]):
-    """
-    to tokenize we are using it that way
-    each text will be consider word
-    each --text with not value consider flag
-    each --text value will consider option
-    
-    """
-    for char in tokens:
-        pass
-        
-
-
-
-def get_args():
-    args = sys.argv
-    return args
-
 class TokenType(IntEnum):
     word = 0
     option = 1
@@ -135,12 +114,74 @@ def get_args_token():
         if args[i].startswith("-") or args[i].startswith("--"):
             if i < len(args)-1 and not args[i+1].startswith("-"):
                 token.append({"type:": TokenType.option, "key": args[i], "value": args[i+1]})
-                i += 2
+                i += 1
             else:
                 token.append({"type": TokenType.flag, "value": args[i]})
-                i += 1
+        else:
+            token.append({"type": TokenType.word, "value": args[i]})
         
-        token.append({"type": TokenType.word, "value": args[i]})
         i += 1
     
     return token
+
+
+class List_steam:
+    def __init__(self, list: List, s_idx: int = 0):
+        self.list = list
+        self.idx = s_idx
+        self.end_idx = len(list)
+    
+    @property
+    def eof(self) -> bool:
+        return self.index >= len(self.items)
+    
+    @property
+    def current(self):
+        return self.list[self.idx]
+    
+    def move(self, count: int = 1) -> None:
+        self.idx += count
+        
+    
+        
+    def peek(self) -> Optional[any]:
+        if self.idx >= self.end_idx:
+            return None
+        
+        return self.list[self.idx+1]
+        
+    def next(self) -> Optional[any]:
+        self.move()
+        return self.current
+        
+
+
+def classify_token_type(steam: List_steam) -> Optional[any]:
+    """
+    create the tokens from given text
+    """
+    # scanning for options
+    
+    
+        
+
+
+
+def get_args_token():
+    """
+    tokenize the args passed by sys.argv
+    in these 3 category: word, option, flag
+    """
+    list_steam = List_steam(sys.argv, 1)
+    token = []
+    
+    while list_steam.eof:
+        token.append(
+            classify_token_type(
+                list_steam
+            )
+        )
+    
+    return token
+    
+    

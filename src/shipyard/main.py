@@ -1,7 +1,7 @@
-from .parser import get_args
+from .parser import get_args_token
 
 def main():
-    print(get_args())
+    print(get_args_token())
 
 
 

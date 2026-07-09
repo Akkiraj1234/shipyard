@@ -105,27 +105,8 @@ class TokenType(IntEnum):
     flag = 3
 
 
-def get_args_token():
-    args = sys.argv[1:]
-    token = []
-    i = 0
-    
-    while i < len(args):
-        if args[i].startswith("-") or args[i].startswith("--"):
-            if i < len(args)-1 and not args[i+1].startswith("-"):
-                token.append({"type:": TokenType.option, "key": args[i], "value": args[i+1]})
-                i += 1
-            else:
-                token.append({"type": TokenType.flag, "value": args[i]})
-        else:
-            token.append({"type": TokenType.word, "value": args[i]})
-        
-        i += 1
-    
-    return token
 
-
-class List_steam:
+class ListStream:
     def __init__(self, list: List, s_idx: int = 0):
         self.list = list
         self.idx = s_idx
@@ -133,22 +114,21 @@ class List_steam:
     
     @property
     def eof(self) -> bool:
-        return self.index >= len(self.items)
+        return self.idx >= self.end_idx
     
     @property
     def current(self):
+        if self.eof: return None
         return self.list[self.idx]
+    
+    @property
+    def peek(self) -> Optional[any]:
+        if self.idx+1 >= self.end_idx:
+            return None
+        return self.list[self.idx+1]
     
     def move(self, count: int = 1) -> None:
         self.idx += count
-        
-    
-        
-    def peek(self) -> Optional[any]:
-        if self.idx >= self.end_idx:
-            return None
-        
-        return self.list[self.idx+1]
         
     def next(self) -> Optional[any]:
         self.move()
@@ -156,13 +136,36 @@ class List_steam:
         
 
 
-def classify_token_type(steam: List_steam) -> Optional[any]:
+def classify_token_type(steam: ListStream) -> Optional[any]:
     """
     create the tokens from given text
+    currently its support 
+    --flag search
+    --option value search
+    'any other word' search
+    
+    need to add
+    --option= word search
+    ./hello/some.txt full path creation
     """
     # scanning for options
+    if steam.current.startswith("-") or steam.current.startswith("--"):
+        if "=" in steam.current:
+            key, value = items = steam.current.split("=", 1)
+            val = {"type": TokenType.option, "key": key, "value": value} 
+            
+        elif steam.peek and not steam.peek.startswith("-"):
+            val = {"type": TokenType.option, "key": steam.current, "value": steam.peek}
+            steam.move(1)
+
+        else:
+            val = {"type": TokenType.flag, "key": None, "value": steam.current}
     
+    else:
+        val = {"type": TokenType.word, "key": None, "value": steam.current}
     
+    steam.next()
+    return val
         
 
 
@@ -172,10 +175,10 @@ def get_args_token():
     tokenize the args passed by sys.argv
     in these 3 category: word, option, flag
     """
-    list_steam = List_steam(sys.argv, 1)
+    list_steam = ListStream(sys.argv, 1)
     token = []
     
-    while list_steam.eof:
+    while not list_steam.eof:
         token.append(
             classify_token_type(
                 list_steam

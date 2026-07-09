@@ -1,179 +1,119 @@
 from typing import List, Optional
-from pathlib import Path
 from enum import IntEnum
 import sys
+from .utils import ListStream
 
-
-"""
-CLI Grammar
-=========================
-
-Program
-└── shipyard
-
-Command
-└── roadmap
-
-Subcommand
-└── done
-
-Arguments
-└── SHP-001
-
-Options
-└── --message "Finished parser"
-
-Flags
-└── --force
-
-
-Parser Design
-===========================
-
-The parser works in two stages.
-
-1. Tokenizer
-------------
-Converts raw `sys.argv` into structured tokens.
-
-Example:
-
-    roadmap done SHP-001 --message "Finished parser" --force
-
-↓
-
-    WORD
-    WORD
-    WORD
-    OPTION
-    FLAG
-
-The tokenizer only understands CLI syntax, not Shipyard commands.
-
-
-2. Grammar Parser
------------------
-
-Each parser owns a dictionary of the next valid tokens.
-
-Root Parser
-
-    roadmap -> RoadmapParser
-    doctor  -> DoctorParser
-    release -> ReleaseParser
-
-↓
-
-RoadmapParser
-
-    add
-    done
-    remove
-
-↓
-
-DoneParser
-
-    task_id
-    --message
-    --force
-
-Each parser consumes only the next expected token, then delegates the remaining
-tokens to the next parser.
-
-The parser never searches the entire command line—it walks the command tree one
-step at a time.
-"""
-
-
-registry = {
-    "init": None,
-    "roadmap": None,
-    "Task": None,
-    "idea": None,
-    "doctor": None,
-    "status": None,
-    "generate": None,
-    "update": None,
-    "Release": None
-}
+# Tokenization helpers for the Shipyard CLI parser.
+#
+# This module handles the first parsing step: turning raw values from `sys.argv`
+# into structured tokens that the command grammar can understand later.
+#
+# Example input:
+#     roadmap done SHP-001 --message "Finished parser" --force
+#
+# Example token flow:
+#     WORD
+#     WORD
+#     WORD
+#     OPTION
+#     FLAG
+#
+# This tokenizer only understands CLI shapes such as positional values, options,
+# and flags. It does not decide whether a command is valid; that responsibility
+# belongs to the grammar layer that consumes these tokens one step at a time.
 
 
 class TokenType(IntEnum):
+    """
+    Token categories produced from CLI input.
+
+    `word` represents a positional argument, `option` represents a key-value
+    argument, and `flag` represents a switch without an attached value.
+    """
     word = 0
     option = 1
     flag = 3
-
-
-
-class ListStream:
-    def __init__(self, list: List, s_idx: int = 0):
-        self.list = list
-        self.idx = s_idx
-        self.end_idx = len(list)
     
-    @property
-    def eof(self) -> bool:
-        return self.idx >= self.end_idx
     
-    @property
-    def current(self):
-        if self.eof: return None
-        return self.list[self.idx]
-    
-    @property
-    def peek(self) -> Optional[any]:
-        if self.idx+1 >= self.end_idx:
-            return None
-        return self.list[self.idx+1]
-    
-    def move(self, count: int = 1) -> None:
-        self.idx += count
-        
-    def next(self) -> Optional[any]:
-        self.move()
-        return self.current
-        
-
-
-def classify_token_type(steam: ListStream) -> Optional[any]:
+def remove_flag_prefix(flag: str) -> str:
     """
-    create the tokens from given text
-    currently its support 
-    --flag search
-    --option value search
-    'any other word' search
-    
-    need to add
-    --option= word search
-    ./hello/some.txt full path creation
-    """
-    # scanning for options
-    if steam.current.startswith("-") or steam.current.startswith("--"):
-        if "=" in steam.current:
-            key, value = items = steam.current.split("=", 1)
-            val = {"type": TokenType.option, "key": key, "value": value} 
-            
-        elif steam.peek and not steam.peek.startswith("-"):
-            val = {"type": TokenType.option, "key": steam.current, "value": steam.peek}
-            steam.move(1)
+    Remove a leading CLI prefix from an option or flag name.
 
+    This normalizes tokens like `--force` and `-f` into plain names so the
+    parser can work with consistent values internally.
+    """
+
+    if flag.startswith("--"):
+        return flag[2:]
+
+    if flag.startswith("-"):
+        return flag[1:]
+
+    return flag
+
+
+def classify_token_type(stream: ListStream) -> Optional[any]:
+    """
+    Convert the current CLI value into a token dictionary.
+
+    The tokenizer supports three common input shapes:
+        word
+        --option value
+        --option=value
+        --flag
+
+    A positional value becomes a `word` token. A prefixed argument followed by
+    a separate value, or containing `=`, becomes an `option` token. A prefixed
+    argument with no value becomes a `flag` token.
+
+    This function only classifies syntax. It does not validate command names,
+    argument meaning, or command order.
+    """
+    if stream.current.startswith("-"):
+        # option
+        if "=" in stream.current:
+            key, value = stream.current.split("=", 1)
+            val = {
+                "type": TokenType.option,
+                "key": remove_flag_prefix(key),
+                "value": value,
+            }
+        
+        # option
+        elif stream.peek and not stream.peek.startswith("-"):
+            val = {
+                "type": TokenType.option,
+                "key": remove_flag_prefix(stream.current),
+                "value": stream.peek,
+            }
+            stream.move()
+
+        # flag
         else:
-            val = {"type": TokenType.flag, "key": None, "value": steam.current}
+            val = {
+                "type": TokenType.flag,
+                "key": None,
+                "value": remove_flag_prefix(stream.current),
+            }
     
+    # word
     else:
-        val = {"type": TokenType.word, "key": None, "value": steam.current}
+        val = {
+            "type": TokenType.word,
+            "key": None,
+            "value": stream.current,
+        }
     
-    steam.next()
+    stream.next()
     return val
-        
-
 
 
 def get_args_token():
     """
-    tokenize the args passed by sys.argv
-    in these 3 category: word, option, flag
+    Tokenize command-line arguments from `sys.argv`.
+
+    The returned list contains normalized token dictionaries grouped into the
+    three supported categories: word, option, and flag.
     """
     list_steam = ListStream(sys.argv, 1)
     token = []
@@ -186,5 +126,3 @@ def get_args_token():
         )
     
     return token
-    
-    

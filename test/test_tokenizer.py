@@ -1,2 +1,441 @@
-from shipyard.parser import get_args_token, classify_token_type
+from shipyard.parser import get_args_token, classify_token_type, TokenType
+import sys
+import pytest
 
+
+TOKENIZER_TEST_CASES = [
+    {
+        "query": ["shipyard"],
+        "expected": []
+    },
+    {
+        "query": ["shipyard", "roadmap"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "add"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "add",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "done", "SHP-001"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "done",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "SHP-001",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "task", "show", "TASK-100"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "task",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "show",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "TASK-100",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "--help"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "help",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "release", "--force", "--draft", "--verbose"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "release",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "force",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "draft",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "verbose",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "done", "SHP-001", "--status", "finished"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "done",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "SHP-001",
+            },
+            {
+                "type": TokenType.option,
+                "key": "status",
+                "value": "finished",
+            }
+        ],
+    },
+    {
+        "query": ["shipyard", "release", "--version", "1.0.0"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "release",
+            },
+            {
+                "type": TokenType.option,
+                "key": "version",
+                "value": "1.0.0",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "add", "SHP-100", "--title", "Parser", "--priority", "high", "--assign", "Akki"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "add",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "SHP-100",
+            },
+            {
+                "type": TokenType.option,
+                "key": "title",
+                "value": "Parser",
+            },
+            {
+                "type": TokenType.option,
+                "key": "priority",
+                "value": "high",
+            },
+            {
+                "type": TokenType.option,
+                "key": "assign",
+                "value": "Akki",
+            }
+        ],
+    },
+    {
+        "query": ["shipyard", "release", "--version", "1.2.0", "--tag", "beta", "--author", "Akki"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "release",
+            },
+            {
+                "type": TokenType.option,
+                "key": "version",
+                "value": "1.2.0",
+            },
+            {
+                "type": TokenType.option,
+                "key": "tag",
+                "value": "beta",
+            },
+            {
+                "type": TokenType.option,
+                "key": "author",
+                "value": "Akki",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "release", "--version=1.0.0"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "release",
+            },
+            {
+                "type": TokenType.option,
+                "key": "version",
+                "value": "1.0.0",
+            },
+        ]
+    },
+    {
+        "query": ["shipyard", "update", "--description","Fix parser and tokenizer",],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "update",
+            },
+            {
+                "type": TokenType.option,
+                "key": "description",
+                "value": "Fix parser and tokenizer",
+            },
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "add", "SHP-100", "--title", "Parser", "--priority", "high", "--assign", "Akki", "--force"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "add",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "SHP-100",
+            },
+            {
+                "type": TokenType.option,
+                "key": "title",
+                "value": "Parser",
+            },
+            {
+                "type": TokenType.option,
+                "key": "priority",
+                "value": "high",
+            },
+            {
+                "type": TokenType.option,
+                "key": "assign",
+                "value": "Akki",
+            },
+            {
+                 "type": TokenType.flag,
+                "key": None,
+                "value": "force",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "add", "../docs/ROADMAP.md"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "add",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "../docs/ROADMAP.md",
+            }
+        ],
+    },
+    {
+        "query": ["shipyard", "roadmap", "done", "README.md"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "done",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "README.md",
+            }
+        ],
+    },
+    # fix the error -- become option adn hello become value fix the issue its not valid option so its should fall back to flag 
+    # or simple raise syntax error flag cant be empty or option cant be empty
+    {
+        "query": ["shipyard", "--=hello", "-=hello"],
+        "expected": [
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "=hello",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "=hello",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "----force"],
+        "expected": [
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "--force",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "-abc"],
+        "expected": [
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "abc",
+            }
+        ]
+    },
+    {
+        "query": ["shipyard", "roadmap", "add", "SHP-999", "--title", "Complete parser", "--priority=critical", "--assign", "Akki", "--message", "Implement grammar parser", "--force", "--verbose"],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "roadmap",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "add",
+            },
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "SHP-999",
+            },
+            {
+                "type": TokenType.option,
+                "key": "title",
+                "value": "Complete parser",
+            },
+            {
+                "type": TokenType.option,
+                "key": "priority",
+                "value": "critical",
+            },
+            {
+                "type": TokenType.option,
+                "key": "assign",
+                "value": "Akki",
+            },
+            {
+                "type": TokenType.option,
+                "key": "message",
+                "value": "Implement grammar parser",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "force",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "verbose",
+            }
+        ]
+    },
+    # the test case has no real life use because 
+    # in sys never takes empty "" value but just to test
+    # behavior we have implemented it.
+    {
+        "query": ["shipyard", "release", "--message", ""],
+        "expected": [
+            {
+                "type": TokenType.word,
+                "key": None,
+                "value": "release",
+            },
+            {
+                "type": TokenType.option,
+                "key": "message",
+                "value": "",
+            }
+        ]
+    },
+]
+
+@pytest.mark.parametrize("test", TOKENIZER_TEST_CASES)
+def test_different_input(test, monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        test["query"]
+    )
+    
+    token = get_args_token()
+    
+    assert token == test["expected"], (
+        f"Failed: {' '.join(test['query'])}"
+    )
+     

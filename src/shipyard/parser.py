@@ -80,7 +80,7 @@ def classify_token_type(stream: ListStream) -> Optional[any]:
             }
         
         # option
-        elif stream.peek and not stream.peek.startswith("-"):
+        elif stream.peek is not None and not stream.peek.startswith("-"):
             val = {
                 "type": TokenType.option,
                 "key": remove_flag_prefix(stream.current),

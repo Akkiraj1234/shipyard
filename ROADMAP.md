@@ -49,6 +49,13 @@ These entries will be merged into the next generated release before being cleare
 * [ ] SHP-016 added: Improved metadata management.
 
 
+## 🚀 v1.2.0
+
+> **Status:** Planned
+
+* [ ] SHP-017 fixed: fix tokenize to support all not implemented test case in test_tokenizer.py
+
+
 ## 🌱 Future
 
 The following ideas are intentionally **not scheduled**.

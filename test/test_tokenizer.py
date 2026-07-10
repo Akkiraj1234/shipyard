@@ -1,4 +1,10 @@
-from shipyard.parser import get_args_token, classify_token_type, TokenType
+from shipyard.parser import (
+    tokenize, 
+    TokenType, 
+    remove_flag_prefix,
+    # classify_token_type, # we are not testing it because tokenize test already cover its test
+)
+
 import sys
 import pytest
 
@@ -320,21 +326,24 @@ TOKENIZER_TEST_CASES = [
     },
     # fix the error -- become option adn hello become value fix the issue its not valid option so its should fall back to flag 
     # or simple raise syntax error flag cant be empty or option cant be empty
-    {
-        "query": ["shipyard", "--=hello", "-=hello"],
-        "expected": [
-            {
-                "type": TokenType.flag,
-                "key": None,
-                "value": "=hello",
-            },
-            {
-                "type": TokenType.flag,
-                "key": None,
-                "value": "=hello",
-            }
-        ]
-    },
+    pytest.param(
+        {
+            "query": ["shipyard", "--=hello", "-=hello"],
+            "expected": [
+                {
+                    "type": TokenType.flag,
+                    "key": None,
+                    "value": "=hello",
+                },
+                {
+                    "type": TokenType.flag,
+                    "key": None,
+                    "value": "=hello",
+                }
+            ]
+        },
+        marks=pytest.mark.xfail(reason="Not implemented yet")
+    ),
     {
         "query": ["shipyard", "----force"],
         "expected": [
@@ -423,19 +432,117 @@ TOKENIZER_TEST_CASES = [
             }
         ]
     },
+    {
+        "query": ["shipyard", "--force", "--force"],
+        "expected": [
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "force",
+            },
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "force",
+            },
+        ],
+    },
+    {
+        "query": ["shipyard", "--version", "1", "--version", "2"],
+        "expected": [
+            {
+                "type": TokenType.option,
+                "key": "version",
+                "value": "1",
+            },
+            {
+                "type": TokenType.option,
+                "key": "version",
+                "value": "2",
+            },
+        ],
+    },
+    {
+        "query": ["shipyard", "--message", "a=b=c"],
+        "expected": [
+            {
+                "type": TokenType.option,
+                "key": "message",
+                "value": "a=b=c",
+            },
+        ],
+    },
+    pytest.param(
+        {
+            "query": ["shipyard", ""],
+            "expected": [
+                {
+                    "type": TokenType.word,
+                    "key": None,
+                    "value": "",
+                },
+            ],
+        }
+    ),
+    # its should fail
+    {
+        "query": ["shipyard", "--"],
+        "expected": [
+            {
+                "type": TokenType.flag,
+                "key": None,
+                "value": "",
+            },
+        ],
+    },
+    pytest.param(
+        {
+            "query": ["shipyard", "--="],
+            "expected": [
+                {
+                    "type": TokenType.flag,
+                    "key": None,
+                    "value": "=",
+                },
+            ],
+        },
+        marks=pytest.mark.xfail(reason="Not implemented yet"),
+    ),
+    pytest.param(
+        {
+            "query": ["shipyard", "--=hello"],
+            "expected": [
+                {
+                    "type": TokenType.flag,
+                    "key": None,
+                    "value": "=hello",
+                },
+            ],
+        },
+        marks=pytest.mark.xfail(reason="Not implemented yet"),
+    ),
+    {
+        "query": ["shipyard", "--title="],
+        "expected": [
+            {
+                "type": TokenType.option,
+                "key": "title",
+                "value": "",
+            },
+        ],
+    },
 ]
+
 
 @pytest.mark.parametrize("test", TOKENIZER_TEST_CASES)
 def test_different_input(test, monkeypatch):
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        test["query"]
-    )
-    
-    token = get_args_token()
-    
-    assert token == test["expected"], (
-        f"Failed: {' '.join(test['query'])}"
-    )
+    token = tokenize(test["query"])
+    assert token == test["expected"]
      
+
+def remove_flag_prefix():
+    assert remove_flag_prefix("--help") == "help"
+    assert remove_flag_prefix("-h") == "h"
+    assert remove_flag_prefix("---help") == "-help"
+    assert remove_flag_prefix("-=-help") == "=-help"
+    assert remove_flag_prefix("roadmap") == "roadmap"

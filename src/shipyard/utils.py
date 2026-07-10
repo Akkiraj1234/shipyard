@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List
 
 
 class ListStream:
@@ -17,7 +17,7 @@ class ListStream:
         return self.list[self.idx]
     
     @property
-    def peek(self) -> Optional[any]:
+    def peek(self) -> Any | None:
         if self.idx+1 >= self.end_idx:
             return None
         return self.list[self.idx+1]
@@ -25,7 +25,7 @@ class ListStream:
     def move(self, count: int = 1) -> None:
         self.idx += count
         
-    def next(self) -> Optional[any]:
+    def next(self) -> Any | None:
         self.move()
         return self.current
     

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List
 from enum import IntEnum
 import sys
 from .utils import ListStream
@@ -32,8 +32,10 @@ class TokenType(IntEnum):
     """
     word = 0
     option = 1
-    flag = 3
+    flag = 2
     
+
+class stream_
     
 def remove_flag_prefix(flag: str) -> str:
     """
@@ -52,7 +54,7 @@ def remove_flag_prefix(flag: str) -> str:
     return flag
 
 
-def classify_token_type(stream: ListStream) -> Optional[any]:
+def classify_token_type(stream: ListStream) -> Any | None:
     """
     Convert the current CLI value into a token dictionary.
 
@@ -108,14 +110,14 @@ def classify_token_type(stream: ListStream) -> Optional[any]:
     return val
 
 
-def get_args_token():
+def tokenize(argv: List[str]):
     """
     Tokenize command-line arguments from `sys.argv`.
 
     The returned list contains normalized token dictionaries grouped into the
     three supported categories: word, option, and flag.
     """
-    list_steam = ListStream(sys.argv, 1)
+    list_steam = ListStream(argv, 1)
     token = []
     
     while not list_steam.eof:
@@ -126,3 +128,17 @@ def get_args_token():
         )
     
     return token
+
+
+def parser():
+    """
+    its take user input from sys.args its tokenize it 
+    and return a parser_stream obj
+    """
+    argv = sys.argv
+    tokens = tokenize(argv)
+    
+    
+    
+    
+

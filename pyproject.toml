@@ -1,6 +1,6 @@
 [project]
 name = "shipyard"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Git-inspired project companion for managing project metadata, roadmaps, releases, and documentation."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -60,7 +60,7 @@ Repository = "https://github.com/AkkiRaj1234/shipyard"
 Issues = "https://github.com/AkkiRaj1234/shipyard/issues"
 
 [project.scripts]
-shipyard = "shipyard.main:main"
+shipyard = "shipyard.cli:main"
 
 [dependency-groups]
 dev = [

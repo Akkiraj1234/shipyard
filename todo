@@ -1,7 +1,7 @@
 [SHP-000] Foundation
 
 - [ ] Implement the CLI parser. Every command passes through the parser, which resolves the command, parses arguments and flags, and dispatches execution to the command's `run()` method. The parser is not responsible for error handling.
-- [ ] Create the application bootstrap (`__init__.py`, `__main__.py`, and `cli.py`) together with the root-level exception handler.
+- [x] Create the application bootstrap (`__init__.py`, `__main__.py`, and `cli.py`) together with the root-level exception handler.
 - [ ] Create the core modules (`error.py`, `utils.py`, and other shared infrastructure).
 - [ ] Implement the command base class/interface. Every command should expose a consistent API (for example, `run()`) and provide metadata such as its name, aliases, and help information.
 - [ ] Implement the command registry. Every command is registered here and discovered by the CLI.

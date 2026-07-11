@@ -1,7 +1,7 @@
-from typing import Any, List
+from typing import Any, List, TypeAlias, Dict, Optional, TypedDict
 from enum import IntEnum
 import sys
-from .utils import ListStream
+from .utils import ListStream, TokenType
 
 # Tokenization helpers for the Shipyard CLI parser.
 #
@@ -22,7 +22,6 @@ from .utils import ListStream
 # and flags. It does not decide whether a command is valid; that responsibility
 # belongs to the grammar layer that consumes these tokens one step at a time.
 
-
 class TokenType(IntEnum):
     """
     Token categories produced from CLI input.
@@ -33,9 +32,21 @@ class TokenType(IntEnum):
     word = 0
     option = 1
     flag = 2
-    
 
-class stream_
+class Token(TypedDict):
+    type: TokenType
+    key: Optional[str]
+    value: Optional[str]
+
+
+TokenList: TypeAlias = List[Token]
+
+class ParserRegistry(TypedDict):
+    words: Dict[str, Any]
+    options: Dict[str, Any]
+    flags: Dict[str, Any]
+
+
     
 def remove_flag_prefix(flag: str) -> str:
     """
@@ -54,7 +65,7 @@ def remove_flag_prefix(flag: str) -> str:
     return flag
 
 
-def classify_token_type(stream: ListStream) -> Any | None:
+def classify_token_type(stream: ListStream) -> Token:
     """
     Convert the current CLI value into a token dictionary.
 
@@ -110,7 +121,7 @@ def classify_token_type(stream: ListStream) -> Any | None:
     return val
 
 
-def tokenize(argv: List[str]):
+def tokenize(argv: List[str]) -> TokenList:
     """
     Tokenize command-line arguments from `sys.argv`.
 
@@ -130,13 +141,26 @@ def tokenize(argv: List[str]):
     return token
 
 
-def parser():
+class ParserStream:
+    def __init__(self, token_list: TokenList):
+        pass
+    
+    def parse(self, registry: ParserRegistry,  num: int = 1) -> any:
+        pass
+    
+
+
+
+
+def parser() -> ParserStream:
     """
     its take user input from sys.args its tokenize it 
     and return a parser_stream obj
     """
     argv = sys.argv
     tokens = tokenize(argv)
+    return ParserStream(tokens)
+    
     
     
     

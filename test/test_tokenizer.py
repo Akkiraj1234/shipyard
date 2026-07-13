@@ -1,7 +1,7 @@
 from shipyard.parser import (
     tokenize, 
     TokenType, 
-    remove_flag_prefix,
+    strip_prefix,
     # classify_token_type, # we are not testing it because tokenize test already cover its test
 )
 
@@ -19,7 +19,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             }
         ]
@@ -29,12 +29,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "add",
             }
         ]
@@ -44,17 +44,17 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "done",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "SHP-001",
             }
         ]
@@ -64,17 +64,17 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "task",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "show",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "TASK-100",
             }
         ]
@@ -84,12 +84,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "help",
             }
         ]
@@ -99,22 +99,22 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "release",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "force",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "draft",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "verbose",
             }
         ]
@@ -124,22 +124,22 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "done",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "SHP-001",
             },
             {
                 "type": TokenType.option,
-                "key": "status",
+                "name": "status",
                 "value": "finished",
             }
         ],
@@ -149,12 +149,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "release",
             },
             {
                 "type": TokenType.option,
-                "key": "version",
+                "name": "version",
                 "value": "1.0.0",
             }
         ]
@@ -164,32 +164,32 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "add",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "SHP-100",
             },
             {
                 "type": TokenType.option,
-                "key": "title",
+                "name": "title",
                 "value": "Parser",
             },
             {
                 "type": TokenType.option,
-                "key": "priority",
+                "name": "priority",
                 "value": "high",
             },
             {
                 "type": TokenType.option,
-                "key": "assign",
+                "name": "assign",
                 "value": "Akki",
             }
         ],
@@ -199,22 +199,22 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "release",
             },
             {
                 "type": TokenType.option,
-                "key": "version",
+                "name": "version",
                 "value": "1.2.0",
             },
             {
                 "type": TokenType.option,
-                "key": "tag",
+                "name": "tag",
                 "value": "beta",
             },
             {
                 "type": TokenType.option,
-                "key": "author",
+                "name": "author",
                 "value": "Akki",
             }
         ]
@@ -224,12 +224,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "release",
             },
             {
                 "type": TokenType.option,
-                "key": "version",
+                "name": "version",
                 "value": "1.0.0",
             },
         ]
@@ -239,12 +239,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "update",
             },
             {
                 "type": TokenType.option,
-                "key": "description",
+                "name": "description",
                 "value": "Fix parser and tokenizer",
             },
         ]
@@ -254,37 +254,37 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "add",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "SHP-100",
             },
             {
                 "type": TokenType.option,
-                "key": "title",
+                "name": "title",
                 "value": "Parser",
             },
             {
                 "type": TokenType.option,
-                "key": "priority",
+                "name": "priority",
                 "value": "high",
             },
             {
                 "type": TokenType.option,
-                "key": "assign",
+                "name": "assign",
                 "value": "Akki",
             },
             {
                  "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "force",
             }
         ]
@@ -294,12 +294,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "add",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "../docs/ROADMAP.md",
             }
         ],
@@ -309,17 +309,17 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "done",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "README.md",
             }
         ],
@@ -332,12 +332,12 @@ TOKENIZER_TEST_CASES = [
             "expected": [
                 {
                     "type": TokenType.flag,
-                    "key": None,
+                    "name": None,
                     "value": "=hello",
                 },
                 {
                     "type": TokenType.flag,
-                    "key": None,
+                    "name": None,
                     "value": "=hello",
                 }
             ]
@@ -349,7 +349,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "--force",
             }
         ]
@@ -359,7 +359,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "abc",
             }
         ]
@@ -369,47 +369,47 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "roadmap",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "add",
             },
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "SHP-999",
             },
             {
                 "type": TokenType.option,
-                "key": "title",
+                "name": "title",
                 "value": "Complete parser",
             },
             {
                 "type": TokenType.option,
-                "key": "priority",
+                "name": "priority",
                 "value": "critical",
             },
             {
                 "type": TokenType.option,
-                "key": "assign",
+                "name": "assign",
                 "value": "Akki",
             },
             {
                 "type": TokenType.option,
-                "key": "message",
+                "name": "message",
                 "value": "Implement grammar parser",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "force",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "verbose",
             }
         ]
@@ -422,12 +422,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.word,
-                "key": None,
+                "name": None,
                 "value": "release",
             },
             {
                 "type": TokenType.option,
-                "key": "message",
+                "name": "message",
                 "value": "",
             }
         ]
@@ -437,12 +437,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "force",
             },
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "force",
             },
         ],
@@ -452,12 +452,12 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.option,
-                "key": "version",
+                "name": "version",
                 "value": "1",
             },
             {
                 "type": TokenType.option,
-                "key": "version",
+                "name": "version",
                 "value": "2",
             },
         ],
@@ -467,7 +467,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.option,
-                "key": "message",
+                "name": "message",
                 "value": "a=b=c",
             },
         ],
@@ -478,7 +478,7 @@ TOKENIZER_TEST_CASES = [
             "expected": [
                 {
                     "type": TokenType.word,
-                    "key": None,
+                    "name": None,
                     "value": "",
                 },
             ],
@@ -490,7 +490,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.flag,
-                "key": None,
+                "name": None,
                 "value": "",
             },
         ],
@@ -501,7 +501,7 @@ TOKENIZER_TEST_CASES = [
             "expected": [
                 {
                     "type": TokenType.flag,
-                    "key": None,
+                    "name": None,
                     "value": "=",
                 },
             ],
@@ -514,7 +514,7 @@ TOKENIZER_TEST_CASES = [
             "expected": [
                 {
                     "type": TokenType.flag,
-                    "key": None,
+                    "name": None,
                     "value": "=hello",
                 },
             ],
@@ -526,7 +526,7 @@ TOKENIZER_TEST_CASES = [
         "expected": [
             {
                 "type": TokenType.option,
-                "key": "title",
+                "name": "title",
                 "value": "",
             },
         ],
@@ -540,9 +540,9 @@ def test_different_input(test, monkeypatch):
     assert token == test["expected"]
      
 
-def remove_flag_prefix():
-    assert remove_flag_prefix("--help") == "help"
-    assert remove_flag_prefix("-h") == "h"
-    assert remove_flag_prefix("---help") == "-help"
-    assert remove_flag_prefix("-=-help") == "=-help"
-    assert remove_flag_prefix("roadmap") == "roadmap"
+def test_remove_flag_prefix():
+    assert strip_prefix("--help") == "help"
+    assert strip_prefix("-h") == "h"
+    assert strip_prefix("---help") == "-help"
+    assert strip_prefix("-=-help") == "=-help"
+    assert strip_prefix("roadmap") == "roadmap"

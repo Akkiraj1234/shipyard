@@ -1,54 +1,83 @@
-from typing import Any, List, TypeAlias, Dict, Optional, TypedDict
-from enum import IntEnum
-import sys
-from .utils import ListStream, TokenType
+"""
+Shipyard command-line parser.
 
-# Tokenization helpers for the Shipyard CLI parser.
-#
-# This module handles the first parsing step: turning raw values from `sys.argv`
-# into structured tokens that the command grammar can understand later.
-#
-# Example input:
-#     roadmap done SHP-001 --message "Finished parser" --force
-#
-# Example token flow:
-#     WORD
-#     WORD
-#     WORD
-#     OPTION
-#     FLAG
-#
-# This tokenizer only understands CLI shapes such as positional values, options,
-# and flags. It does not decide whether a command is valid; that responsibility
-# belongs to the grammar layer that consumes these tokens one step at a time.
+This module implements the core parsing pipeline for the Shipyard CLI.
+It converts raw command-line arguments into normalized tokens and exposes
+a stream interface for consuming those tokens according to a command
+grammar.
+
+Responsibilities
+----------------
+- Tokenize raw CLI arguments.
+- Normalize options and flags.
+- Provide sequential token traversal.
+- Support grammar-driven command parsing.
+
+This module performs lexical and stream management only. Command
+validation and execution are delegated to the registered grammar.
+"""
+
+
+from __future__ import annotations
+
+from enum import IntEnum
+from typing import Any, TypedDict, TypeAlias
+from dataclasses import dataclass, field
+import sys
+
+from .utils import ListStream
+from .command import Command
 
 class TokenType(IntEnum):
     """
-    Token categories produced from CLI input.
-
-    `word` represents a positional argument, `option` represents a key-value
-    argument, and `flag` represents a switch without an attached value.
+    Categories of tokens recognized from command-line input.
     """
     word = 0
     option = 1
     flag = 2
 
+
 class Token(TypedDict):
+    """
+    Normalized token produced during lexical analysis.
+    """
     type: TokenType
-    key: Optional[str]
-    value: Optional[str]
+    name: str
+    value: str | None
 
 
-TokenList: TypeAlias = List[Token]
+class GrammarRegistry(TypedDict):
+    """
+    Grammar definition for a command scope.
 
-class ParserRegistry(TypedDict):
-    words: Dict[str, Any]
-    options: Dict[str, Any]
-    flags: Dict[str, Any]
+    Defines the valid subcommands, options, flags, and whether the
+    current command consumes positional arguments.
+    """
+    words: dict[str, Any]
+    options: dict[str, Any]
+    flags: dict[str, Any]
+    accepts_arguments: bool
 
 
-    
-def remove_flag_prefix(flag: str) -> str:
+@dataclass(slots=True, frozen=True)
+class ParseResult:
+    """
+    Normalized command input produced by ParserStream.
+
+    Commands consume this object to interpret positional arguments,
+    options, and flags.
+    """
+    arguments: list[str] = field(default_factory=list)
+    flags: set[str] = field(default_factory=set)
+    options: dict[str, str] = field(default_factory=dict)
+
+
+TokenList: TypeAlias = list[Token]
+
+
+
+
+def strip_prefix(flag: str) -> str:
     """
     Remove a leading CLI prefix from an option or flag name.
 
@@ -65,7 +94,7 @@ def remove_flag_prefix(flag: str) -> str:
     return flag
 
 
-def classify_token_type(stream: ListStream) -> Token:
+def classify_token_type(stream: ListStream) -> ParseResult:
     """
     Convert the current CLI value into a token dictionary.
 
@@ -83,37 +112,33 @@ def classify_token_type(stream: ListStream) -> Token:
     argument meaning, or command order.
     """
     if stream.current.startswith("-"):
-        # option
         if "=" in stream.current:
             key, value = stream.current.split("=", 1)
             val = {
                 "type": TokenType.option,
-                "key": remove_flag_prefix(key),
+                "name": strip_prefix(key),
                 "value": value,
             }
         
-        # option
         elif stream.peek is not None and not stream.peek.startswith("-"):
             val = {
                 "type": TokenType.option,
-                "key": remove_flag_prefix(stream.current),
+                "name": strip_prefix(stream.current),
                 "value": stream.peek,
             }
             stream.move()
 
-        # flag
         else:
             val = {
                 "type": TokenType.flag,
-                "key": None,
-                "value": remove_flag_prefix(stream.current),
+                "name": None,
+                "value": strip_prefix(stream.current),
             }
-    
-    # word
+        
     else:
         val = {
             "type": TokenType.word,
-            "key": None,
+            "name": None,
             "value": stream.current,
         }
     
@@ -121,7 +146,8 @@ def classify_token_type(stream: ListStream) -> Token:
     return val
 
 
-def tokenize(argv: List[str]) -> TokenList:
+
+def tokenize(argv: list[str]) -> TokenList:
     """
     Tokenize command-line arguments from `sys.argv`.
 
@@ -142,17 +168,67 @@ def tokenize(argv: List[str]) -> TokenList:
 
 
 class ParserStream:
+    
+    _TOKEN_TABLE = {
+        TokenType.word: "words",
+        TokenType.option: "options",
+        TokenType.flag: "flags",
+    }
+    
     def __init__(self, token_list: TokenList):
+        self.token_list = ListStream(token_list)
+    
+    def _search(self, grammar: GrammarRegistry):
+        word = []
+        flag = []
+        option = {}
+        
+        while self.token_list.current:
+            token = self.token_list.current
+            if token.type == TokenType.word:
+                word.append(token.name)
+                
+            elif token.type == TokenType.flag:
+                flag.append(token.name)
+            
+            else:
+                option[token.name] = token.value
+
+            self.token_list.move()
+        
+        return ParseResult(word, flag, option)
+    
+    def _error(self):
         pass
     
-    def parse(self, registry: ParserRegistry,  num: int = 1) -> any:
-        pass
+    # there wont be any case where it will return both command and parseresult 
+    # so its either command object or parseresult.
     
+    def parse(self, grammar: GrammarRegistry) -> Command | ParseResult:
+        """
+        If the current grammar has child commands, search for the next
+        token as a subcommand. If it has no child commands, consume the 
+        remaining input according to the grammar.
+        """
+        if grammar.accepts_arguments:
+            return self._search(grammar)
+        
+        token = self.token_list.current
+        registry = grammar[self._TOKEN_TABLE[token.type]]
+        
+        if registry is None:
+            raise 
+        
+        if not token.name in registry:
+            raise
+        
+        return registry[token.name]
+    
+    def raise_error(self):
+        pass
 
 
-
-
-def parser() -> ParserStream:
+def create_parser() -> ParserStream:
     """
     its take user input from sys.args its tokenize it 
     and return a parser_stream obj
@@ -160,9 +236,3 @@ def parser() -> ParserStream:
     argv = sys.argv
     tokens = tokenize(argv)
     return ParserStream(tokens)
-    
-    
-    
-    
-    
-

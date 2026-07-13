@@ -60,18 +60,17 @@ class ListStream:
         self.move()
         return self.current
     
-    
-
-    
-    
-registry = {
-    "init": None,
-    "roadmap": None,
-    "Task": None,
-    "idea": None,
-    "doctor": None,
-    "status": None,
-    "generate": None,
-    "update": None,
-    "Release": None
-}
+    def __str__(self):
+        lines = ["ListStream"]
+        
+        for num, item in enumerate(self.list):
+            connector = "├──" if num == self.end_idx else "└──"
+            end = "  <- curr" if num == self.idx else ""
+            lines.append(f"{connector} {item} {end}")
+            
+        return "/n".join(lines)
+        
+        
+    def __repr__(self):
+        return self.__str__()
+        

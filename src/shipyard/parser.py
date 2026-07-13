@@ -20,59 +20,20 @@ validation and execution are delegated to the registered grammar.
 
 from __future__ import annotations
 
-from enum import IntEnum
-from typing import Any, TypedDict, TypeAlias
-from dataclasses import dataclass, field
 import sys
+from typing import TYPE_CHECKING
 
+from .types import (
+    GrammarRegistry, 
+    ParseResult, 
+    Token, 
+    TokenList, 
+    TokenType
+)
 from .utils import ListStream
-from .command import Command
 
-class TokenType(IntEnum):
-    """
-    Categories of tokens recognized from command-line input.
-    """
-    word = 0
-    option = 1
-    flag = 2
-
-
-class Token(TypedDict):
-    """
-    Normalized token produced during lexical analysis.
-    """
-    type: TokenType
-    name: str
-    value: str | None
-
-
-class GrammarRegistry(TypedDict):
-    """
-    Grammar definition for a command scope.
-
-    Defines the valid subcommands, options, flags, and whether the
-    current command consumes positional arguments.
-    """
-    words: dict[str, Any]
-    options: dict[str, Any]
-    flags: dict[str, Any]
-    accepts_arguments: bool
-
-
-@dataclass(slots=True, frozen=True)
-class ParseResult:
-    """
-    Normalized command input produced by ParserStream.
-
-    Commands consume this object to interpret positional arguments,
-    options, and flags.
-    """
-    arguments: list[str] = field(default_factory=list)
-    flags: set[str] = field(default_factory=set)
-    options: dict[str, str] = field(default_factory=dict)
-
-
-TokenList: TypeAlias = list[Token]
+if TYPE_CHECKING:
+    from .command import Command
 
 
 
@@ -94,7 +55,7 @@ def strip_prefix(flag: str) -> str:
     return flag
 
 
-def classify_token_type(stream: ListStream) -> ParseResult:
+def classify_token_type(stream: ListStream) -> Token:
     """
     Convert the current CLI value into a token dictionary.
 
@@ -178,21 +139,24 @@ class ParserStream:
     def __init__(self, token_list: TokenList):
         self.token_list = ListStream(token_list)
     
-    def _search(self, grammar: GrammarRegistry):
-        word = []
-        flag = []
-        option = {}
+    def _search(self, grammar: GrammarRegistry) -> ParseResult:
+        word: list[str] = []
+        flag: set[str] = set()
+        option: dict[str, str] = {}
         
         while self.token_list.current:
             token = self.token_list.current
-            if token.type == TokenType.word:
-                word.append(token.name)
+            if token["type"] == TokenType.word:
+                if token["value"] is not None:
+                    word.append(token["value"])
                 
-            elif token.type == TokenType.flag:
-                flag.append(token.name)
+            elif token["type"] == TokenType.flag:
+                if token["value"] is not None:
+                    flag.add(token["value"])
             
             else:
-                option[token.name] = token.value
+                if token["name"] is not None and token["value"] is not None:
+                    option[token["name"]] = token["value"]
 
             self.token_list.move()
         
@@ -210,19 +174,19 @@ class ParserStream:
         token as a subcommand. If it has no child commands, consume the 
         remaining input according to the grammar.
         """
-        if grammar.accepts_arguments:
+        if grammar["accepts_arguments"]:
             return self._search(grammar)
         
         token = self.token_list.current
-        registry = grammar[self._TOKEN_TABLE[token.type]]
+        if token is None:
+            return self._search(grammar)
+
+        registry = grammar[self._TOKEN_TABLE[token["type"]]]
         
         if registry is None:
-            raise 
-        
-        if not token.name in registry:
-            raise
-        
-        return registry[token.name]
+            raise ValueError("Invalid grammar registry for token stream.")
+
+        return self._search(grammar)
     
     def raise_error(self):
         pass

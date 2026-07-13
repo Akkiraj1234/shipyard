@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from .parser import GrammarRegistry, ParseResult
+from .types import GrammarRegistry, ParseResult
+
+
 
 class Command(ABC):
     """

@@ -72,6 +72,7 @@ def classify_token_type(stream: ListStream) -> Token:
     This function only classifies syntax. It does not validate command names,
     argument meaning, or command order.
     """
+    
     if stream.current.startswith("-"):
         if "=" in stream.current:
             key, value = stream.current.split("=", 1)
@@ -127,8 +128,8 @@ def tokenize(argv: list[str]) -> TokenList:
     
     return token
 
-
-class ParserStream:
+# redsgin it
+class ParserStream(ListStream):
     
     _TOKEN_TABLE = {
         TokenType.word: "words",
@@ -168,6 +169,7 @@ class ParserStream:
     # there wont be any case where it will return both command and parseresult 
     # so its either command object or parseresult.
     
+    # should always return a Command
     def parse(self, grammar: GrammarRegistry) -> Command | ParseResult:
         """
         If the current grammar has child commands, search for the next
@@ -187,15 +189,6 @@ class ParserStream:
             raise ValueError("Invalid grammar registry for token stream.")
 
         return self._search(grammar)
-    
-    def raise_error(self):
-        pass
-    
-    def __str__(self) -> str:
-        return f"ParserStream(\n{self.token_list}\n)"
-    
-    def __repr__(self) -> str:
-        self.__str__()
 
 
 def create_parser(argv: list[str] | None = None) -> ParserStream:

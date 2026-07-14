@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import Any, List
+from pathlib import Path
+
+from .command import Command
 
 
     
@@ -75,4 +78,10 @@ class ListStream:
     
     def __repr__(self):
         return self.__str__()
+    
+
+
+def load_module(module: str | Path | Command):
+    pass
+
         

@@ -546,3 +546,55 @@ def test_remove_flag_prefix():
     assert strip_prefix("---help") == "-help"
     assert strip_prefix("-=-help") == "=-help"
     assert strip_prefix("roadmap") == "roadmap"
+    
+    
+
+
+# from shipyard.parser import ParserStream
+#      2 +from shipyard.types import TokenType
+#      3 +from shipyard.utils import ListStream
+#      4 +
+#      5 +
+#      6 +def test_list_stream_str_marks_current_item():
+#      7 +    stream = ListStream(["roadmap", "--help"])
+#      8 +
+#      9 +    assert str(stream) == "\n".join(
+#     10 +        [
+#     11 +            "ListStream",
+#     12 +            "├── roadmap  <- curr",
+#     13 +            "└── --help",
+#     14 +        ]
+#     15 +    )
+#     16 +
+#     17 +
+#     18 +def test_list_stream_str_marks_eof():
+#     19 +    stream = ListStream(["roadmap"], 1)
+#     20 +
+#     21 +    assert str(stream) == "\n".join(
+#     22 +        [
+#     23 +            "ListStream",
+#     24 +            "└── roadmap",
+#     25 +            "└── <EOF>  <- curr",
+#     26 +        ]
+#     27 +    )
+#     28 +
+#     29 +
+#     30 +def test_parser_stream_str_wraps_token_stream():
+#     31 +    stream = ParserStream(
+#     32 +        [
+#     33 +            {
+#     34 +                "type": TokenType.word,
+#     35 +                "name": None,
+#     36 +                "value": "roadmap",
+#     37 +            }
+#     38 +        ]
+#     39 +    )
+#     40 +
+#     41 +    assert str(stream) == "\n".join(
+#     42 +        [
+#     43 +            "ParserStream(",
+#     44 +            "ListStream",
+#     45 +            "└── {'type': <TokenType.word: 0>, 'name': None, 'value': 'roadmap'}  <- curr",
+#     46 +            ")",
+#     47 +        ]
+#     48 +    )

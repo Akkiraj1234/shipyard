@@ -5,6 +5,7 @@ from enum import IntEnum
 from typing import Any, TypeAlias, TypedDict
 
 
+
 class TokenType(IntEnum):
     """
     Categories of tokens recognized from command-line input.
@@ -23,24 +24,6 @@ class Token(TypedDict):
     type: TokenType
     name: str | None
     value: str | None
-    
-    def __str__(self):
-        return (
-            f"Token: {str(self.type)} | name: {self.name} | value: {self.values}"
-        )
-
-
-@dataclass(slots=True, frozen=True)
-class Token:
-    type: TokenType
-    name: str | None
-    value: str | None
-
-    def __str__(self):
-        return (
-            f"Token(type={self.type.name}, "
-            f"name={self.name!r}, value={self.value!r})"
-        )
 
 
 class GrammarRegistry(TypedDict):

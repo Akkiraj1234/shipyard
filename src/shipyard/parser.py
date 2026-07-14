@@ -190,13 +190,19 @@ class ParserStream:
     
     def raise_error(self):
         pass
+    
+    def __str__(self) -> str:
+        return f"ParserStream(\n{self.token_list}\n)"
+    
+    def __repr__(self) -> str:
+        self.__str__()
 
 
-def create_parser() -> ParserStream:
+def create_parser(argv: list[str] | None = None) -> ParserStream:
     """
     its take user input from sys.args its tokenize it 
     and return a parser_stream obj
     """
-    argv = sys.argv
+    argv = sys.argv if argv is None else argv
     tokens = tokenize(argv)
     return ParserStream(tokens)

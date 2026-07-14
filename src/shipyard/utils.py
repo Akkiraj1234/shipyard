@@ -60,17 +60,19 @@ class ListStream:
         self.move()
         return self.current
     
-    def __str__(self):
+    def __str__(self) -> str:
         lines = ["ListStream"]
         
         for num, item in enumerate(self.list):
-            connector = "├──" if num == self.end_idx else "└──"
+            connector = "└──" if num == self.end_idx else "├──"
             end = "  <- curr" if num == self.idx else ""
             lines.append(f"{connector} {item} {end}")
             
-        return "/n".join(lines)
+        if self.eof:
+            lines.append("└──  <eof>  <── curr")
         
-        
+        return "\n".join(lines)
+    
     def __repr__(self):
         return self.__str__()
         

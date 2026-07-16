@@ -17,7 +17,6 @@ This module performs lexical and stream management only. Command
 validation and execution are delegated to the registered grammar.
 """
 
-
 from __future__ import annotations
 
 import sys
@@ -33,7 +32,7 @@ from .types import (
 from .utils import ListStream
 
 if TYPE_CHECKING:
-    from .command import Command
+    from .core import Command
 
 
 
@@ -108,7 +107,6 @@ def classify_token_type(stream: ListStream) -> Token:
     return val
 
 
-
 def tokenize(argv: list[str]) -> TokenList:
     """
     Tokenize command-line arguments from `sys.argv`.
@@ -128,7 +126,8 @@ def tokenize(argv: list[str]) -> TokenList:
     
     return token
 
-# redsgin it
+
+
 class ParserStream(ListStream):
     
     _TOKEN_TABLE = {
@@ -137,8 +136,37 @@ class ParserStream(ListStream):
         TokenType.flag: "flags",
     }
     
-    def __init__(self, token_list: TokenList):
-        self.token_list = ListStream(token_list)
+    def __init__(self, items: TokenList):
+        super().__init__(items, s_idx = 0)
+        
+    
+    def parse(self, grammar: GrammarRegistry) -> Command | None:
+        """
+        If the current grammar has child commands, search for the next
+        token as a subcommand. If it has no child commands, consume the 
+        remaining input according to the grammar.
+        """
+        if bool(self.current):
+            return None
+        
+        if grammar.has_child and self.current["type"] == TokenType.word:
+            if bool(grammar.words):
+                return Command
+        
+            
+        return Command
+            
+        
+        
+        
+
+        registry = grammar[self._TOKEN_TABLE[token["type"]]]
+        
+        if registry is None:
+            raise ValueError("Invalid grammar registry for token stream.")
+
+        return self._search(grammar)
+    
     
     def _search(self, grammar: GrammarRegistry) -> ParseResult:
         word: list[str] = []
@@ -163,32 +191,11 @@ class ParserStream(ListStream):
         
         return ParseResult(word, flag, option)
     
-    def _error(self):
-        pass
-    
     # there wont be any case where it will return both command and parseresult 
     # so its either command object or parseresult.
     
     # should always return a Command
-    def parse(self, grammar: GrammarRegistry) -> Command | ParseResult:
-        """
-        If the current grammar has child commands, search for the next
-        token as a subcommand. If it has no child commands, consume the 
-        remaining input according to the grammar.
-        """
-        if grammar["accepts_arguments"]:
-            return self._search(grammar)
-        
-        token = self.token_list.current
-        if token is None:
-            return self._search(grammar)
 
-        registry = grammar[self._TOKEN_TABLE[token["type"]]]
-        
-        if registry is None:
-            raise ValueError("Invalid grammar registry for token stream.")
-
-        return self._search(grammar)
 
 
 def create_parser(argv: list[str] | None = None) -> ParserStream:

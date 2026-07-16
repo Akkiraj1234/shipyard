@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from typing import Any, List
 from pathlib import Path
 
-from .command import Command
+from .core import Command
 
-
+list
     
 class ListStream:
     """
@@ -13,17 +14,17 @@ class ListStream:
     Provides cursor-based navigation with lookahead support.
     """
 
-    def __init__(self, list: List, s_idx: int = 0):
+    def __init__(self, items: List, s_idx: int = 0):
         """
         Initialize a stream over a list.
 
         Args:
-            list: Sequence to traverse.
+            items: Sequence to traverse.
             s_idx: Starting index within the sequence.
         """
-        self.list = list
+        self.items = items
         self.idx = s_idx
-        self.end_idx = len(list)
+        self.end_idx = len(items)
 
     @property
     def eof(self) -> bool:
@@ -33,13 +34,14 @@ class ListStream:
         return self.idx >= self.end_idx
 
     @property
-    def current(self):
+    def current(self) -> Any | None:
         """
-        Return the current item, or ``None`` if the stream is exhausted.
+        Return the current item, or `None` if the stream is exhausted.
         """
         if self.eof:
             return None
-        return self.list[self.idx]
+        
+        return self.items[self.idx]
 
     @property
     def peek(self) -> Any | None:
@@ -48,7 +50,8 @@ class ListStream:
         """
         if self.idx + 1 >= self.end_idx:
             return None
-        return self.list[self.idx + 1]
+        
+        return self.items[self.idx + 1]
 
     def move(self, count: int = 1) -> None:
         """
@@ -66,7 +69,7 @@ class ListStream:
     def __str__(self) -> str:
         lines = ["ListStream"]
         
-        for num, item in enumerate(self.list):
+        for num, item in enumerate(self.items):
             connector = "└──" if num == self.end_idx else "├──"
             end = "  <- curr" if num == self.idx else ""
             lines.append(f"{connector} {item} {end}")

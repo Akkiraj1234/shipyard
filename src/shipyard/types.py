@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import IntEnum
 from typing import Any, TypeAlias, TypedDict
+from enum import IntEnum
 
 
 
@@ -26,16 +26,16 @@ class Token(TypedDict):
     value: str | None
 
 
-class GrammarRegistry(TypedDict):
+@dataclass(slots=True, frozen=True)
+class GrammarRegistry:
     """
     Grammar definition for a command scope.
     """
-
-    words: dict[str, Any]
-    options: dict[str, Any]
-    flags: dict[str, Any]
-    accepts_arguments: bool
-
+    words: dict[str, Any] = field(default_factory=dict)
+    options: dict[str, Any] = field(default_factory=dict)
+    flags: dict[str, Any] = field(default_factory=dict)
+    has_child: bool = True
+    
 
 @dataclass(slots=True, frozen=True)
 class ParseResult:

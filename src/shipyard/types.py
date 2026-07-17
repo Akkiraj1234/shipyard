@@ -31,21 +31,21 @@ class GrammarRegistry:
     """
     Grammar definition for a command scope.
     """
-    words: dict[str, Any] = field(default_factory=dict)
-    options: dict[str, Any] = field(default_factory=dict)
-    flags: dict[str, Any] = field(default_factory=dict)
+    words: set[str] = field(default_factory=set)
+    options: set[str] = field(default_factory=set)
+    flags: set[str] = field(default_factory=set)
     has_child: bool = True
-    
 
+    
 @dataclass(slots=True, frozen=True)
 class ParseResult:
     """
     Normalized command input produced by ParserStream.
     """
-
+    child: str | None = None
     arguments: list[str] = field(default_factory=list)
-    flags: set[str] = field(default_factory=set)
     options: dict[str, str] = field(default_factory=dict)
+    flags: set[str] = field(default_factory=set)
 
 
 TokenList: TypeAlias = list[Token]

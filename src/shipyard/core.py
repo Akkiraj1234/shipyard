@@ -22,6 +22,10 @@ class Command(ABC):
     @abstractmethod
     def execute(self, result: ParseResult) -> None:
         ...
+        
+
+class Command:
+    pass
 
 
 def execute(parserstream: ParserStream, grammar: GrammarRegistry) -> int:

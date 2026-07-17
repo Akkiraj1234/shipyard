@@ -149,9 +149,15 @@ class ParserStream(ListStream):
         if bool(self.current):
             return None
         
-        if grammar.has_child and self.current["type"] == TokenType.word:
-            if bool(grammar.words):
-                return Command
+        if (
+            grammar.has_child and 
+            self.current["type"] == TokenType.word and 
+            bool(grammar.words)
+        ):
+            pass
+        
+        return 
+        
         
             
         return Command

@@ -31,10 +31,10 @@ class GrammarRegistry:
     """
     Grammar definition for a command scope.
     """
+    has_child: bool = True
     words: set[str] = field(default_factory=set)
     options: set[str] = field(default_factory=set)
     flags: set[str] = field(default_factory=set)
-    has_child: bool = True
 
     
 @dataclass(slots=True, frozen=True)

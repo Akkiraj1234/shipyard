@@ -27,7 +27,7 @@ from .types import (
     ParseResult, 
     Token, 
     TokenList, 
-    TokenType
+    TokenType 
 )
 from .utils import ListStream
 
@@ -140,13 +140,16 @@ class ParserStream(ListStream):
         super().__init__(items, s_idx = 0)
         
     
-    def parse(self, grammar: GrammarRegistry) -> Command | None:
+    def parse(self, grammar: GrammarRegistry) -> ParseResult | None:
         """
         If the current grammar has child commands, search for the next
         token as a subcommand. If it has no child commands, consume the 
         remaining input according to the grammar.
         """
-        if bool(self.current):
+        if grammar is None:
+            raise ValueError("Invalid grammar registry for token stream.")
+        
+        if self.current is None:
             return None
         
         if (
@@ -154,54 +157,38 @@ class ParserStream(ListStream):
             self.current["type"] == TokenType.word and 
             bool(grammar.words)
         ):
-            pass
-        
-        return 
-        
-        
+            child = self.current["name"] if self.current["name"] in \
+                grammar.words else None
             
-        return Command
+            if child is None:
+                raise ValueError(f"invalid subcommand {child}")
             
+            return ParseResult(
+                child = child
+            )
         
-        
-        
-
-        registry = grammar[self._TOKEN_TABLE[token["type"]]]
-        
-        if registry is None:
-            raise ValueError("Invalid grammar registry for token stream.")
-
-        return self._search(grammar)
+        parse_arg = self._parse_arguments(self, grammar)
+        parse_arg.child = None
+        return parse_arg
     
-    
-    def _search(self, grammar: GrammarRegistry) -> ParseResult:
+    def _parse_arguments(self, grammar: GrammarRegistry) -> ParseResult:
         word: list[str] = []
         flag: set[str] = set()
         option: dict[str, str] = {}
         
-        while self.token_list.current:
-            token = self.token_list.current
-            if token["type"] == TokenType.word:
-                if token["value"] is not None:
-                    word.append(token["value"])
-                
-            elif token["type"] == TokenType.flag:
-                if token["value"] is not None:
-                    flag.add(token["value"])
+        while self.current:
+            token = self.current
             
-            else:
-                if token["name"] is not None and token["value"] is not None:
-                    option[token["name"]] = token["value"]
+            if token["type"] == TokenType.word and token["name"]:
+                word.append(token["name"])
 
-            self.token_list.move()
+            elif token["type"] == TokenType.flag and token["name"]:
+                flag.add(token["name"])
+            
+            elif token["name"] and token["value"] is not None:
+                option[token["name"]] = token["value"]
         
-        return ParseResult(word, flag, option)
-    
-    # there wont be any case where it will return both command and parseresult 
-    # so its either command object or parseresult.
-    
-    # should always return a Command
-
+        return ParseResult(None, word, option, flag)
 
 
 def create_parser(argv: list[str] | None = None) -> ParserStream:

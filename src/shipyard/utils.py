@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, List, TYPE_CHECKING
 from pathlib import Path
 
-from .core import Command
+if TYPE_CHECKING:
+    from .core import Command
 
-list
+
     
 class ListStream:
     """
@@ -83,6 +84,8 @@ class ListStream:
         return self.__str__()
     
 
+def has_item(item: set, value: str) -> str | None:
+    return item[value] if value in item else None
 
 def load_module(module: str | Path | Command):
     pass

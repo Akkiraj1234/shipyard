@@ -82,10 +82,7 @@ class ListStream:
     
     def __repr__(self):
         return self.__str__()
-    
 
-def has_item(item: set, value: str) -> str | None:
-    return item[value] if value in item else None
 
 def load_module(module: str | Path | Command):
     pass

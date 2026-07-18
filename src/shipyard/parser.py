@@ -92,15 +92,15 @@ def classify_token_type(stream: ListStream) -> Token:
         else:
             val = {
                 "type": TokenType.flag,
-                "name": None,
-                "value": strip_prefix(stream.current),
+                "name": strip_prefix(stream.current),
+                "value": None,
             }
         
     else:
         val = {
             "type": TokenType.word,
-            "name": None,
-            "value": stream.current,
+            "name": stream.current,
+            "value": None,
         }
     
     stream.next()
@@ -138,6 +138,7 @@ class ParserStream(ListStream):
     
     def __init__(self, items: TokenList):
         super().__init__(items, s_idx = 0)
+        self.grammer = None
         
     
     def parse(self, grammar: GrammarRegistry) -> ParseResult | None:
@@ -146,32 +147,31 @@ class ParserStream(ListStream):
         token as a subcommand. If it has no child commands, consume the 
         remaining input according to the grammar.
         """
-        if grammar is None:
+        self.grammer = grammar
+        
+        if self.grammar is None:
             raise ValueError("Invalid grammar registry for token stream.")
         
         if self.current is None:
             return None
         
         if (
-            grammar.has_child and 
+            self.grammar.has_child and 
             self.current["type"] == TokenType.word and 
-            bool(grammar.words)
+            bool(self.grammar.words)
         ):
-            child = self.current["name"] if self.current["name"] in \
-                grammar.words else None
+            child = self.current["name"]
             
-            if child is None:
+            if child not in self.grammar.words:
                 raise ValueError(f"invalid subcommand {child}")
             
-            return ParseResult(
-                child = child
-            )
+            self.move()
+            return ParseResult(child = child)
         
-        parse_arg = self._parse_arguments(self, grammar)
-        parse_arg.child = None
+        parse_arg = self._parse_arguments()
         return parse_arg
     
-    def _parse_arguments(self, grammar: GrammarRegistry) -> ParseResult:
+    def _parse_arguments(self) -> ParseResult:
         word: list[str] = []
         flag: set[str] = set()
         option: dict[str, str] = {}
@@ -179,6 +179,7 @@ class ParserStream(ListStream):
         while self.current:
             token = self.current
             
+            # check grammer too if its avilable else raise error 
             if token["type"] == TokenType.word and token["name"]:
                 word.append(token["name"])
 
@@ -187,6 +188,8 @@ class ParserStream(ListStream):
             
             elif token["name"] and token["value"] is not None:
                 option[token["name"]] = token["value"]
+                
+            self.move()
         
         return ParseResult(None, word, option, flag)
 

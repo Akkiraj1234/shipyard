@@ -52,6 +52,7 @@ classifiers = [
 
 dependencies = [
     "blessed>=1.46.0,<2.0.0",
+    "tomli-w (>=1.2.0,<2.0.0)",
 ]
 
 [project.urls]

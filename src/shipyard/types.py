@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, TypeAlias, TypedDict
+from pathlib import Path
 from enum import IntEnum
 
 
@@ -31,6 +32,7 @@ class GrammarRegistry:
     """
     Grammar definition for a command scope.
     """
+    
     has_child: bool = True
     words: set[str] = field(default_factory=set)
     options: set[str] = field(default_factory=set)
@@ -42,10 +44,28 @@ class ParseResult:
     """
     Normalized command input produced by ParserStream.
     """
+    
     child: str | None = None
     arguments: list[str] = field(default_factory=list)
     options: dict[str, str] = field(default_factory=dict)
     flags: set[str] = field(default_factory=set)
 
 
+@dataclass(slots=True)
+class RegistryData:
+    """
+    Metadata stored for a command in the registry.
+    """
+
+    name: str
+    description: str
+    help: str
+    hidden: bool
+    entrypoint: str
+
+    path: Path | None = None
+
+
 TokenList: TypeAlias = list[Token]
+
+CommandRegistry = dict[str, RegistryData]

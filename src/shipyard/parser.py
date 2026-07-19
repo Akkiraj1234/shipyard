@@ -103,6 +103,9 @@ def classify_token_type(stream: ListStream) -> Token:
             "value": None,
         }
     
+    assert val["name"] is not None, \
+        "Token.name should never be None."
+    
     stream.next()
     return val
 
@@ -130,18 +133,12 @@ def tokenize(argv: list[str]) -> TokenList:
 
 class ParserStream(ListStream):
     
-    _TOKEN_TABLE = {
-        TokenType.word: "words",
-        TokenType.option: "options",
-        TokenType.flag: "flags",
-    }
-    
     def __init__(self, items: TokenList):
         super().__init__(items, s_idx = 0)
         self.grammer = None
         
     
-    def parse(self, grammar: GrammarRegistry) -> ParseResult | None:
+    def parse(self, grammar: GrammarRegistry) -> ParseResult:
         """
         If the current grammar has child commands, search for the next
         token as a subcommand. If it has no child commands, consume the 
@@ -153,7 +150,7 @@ class ParserStream(ListStream):
             raise ValueError("Invalid grammar registry for token stream.")
         
         if self.current is None:
-            return None
+            return ParseResult()
         
         if (
             self.grammar.has_child and 
@@ -177,20 +174,28 @@ class ParserStream(ListStream):
         option: dict[str, str] = {}
         
         while self.current:
-            token = self.current
+            token = self.current           
             
-            # check grammer too if its avilable else raise error 
-            if token["type"] == TokenType.word and token["name"]:
+            if token["type"] == TokenType.word:
+                if token["name"] not in self.grammer.words:
+                    raise ValueError(f"{token["name"]} is not valid argument")
+                
                 word.append(token["name"])
 
-            elif token["type"] == TokenType.flag and token["name"]:
+            elif token["type"] == TokenType.flag:
+                if token["name"] not in self.grammer.flags:
+                    raise ValueError(f"{token["name"]} is not valid flags")
+                
                 flag.add(token["name"])
             
-            elif token["name"] and token["value"] is not None:
+            elif token["name"] and token["value"]:
+                if token["name"] not in self.grammer.options:
+                    raise ValueError(f"{token["name"]} is not valid option")
+                
                 option[token["name"]] = token["value"]
                 
             self.move()
-        
+            
         return ParseResult(None, word, option, flag)
 
 

@@ -6,5 +6,6 @@ METADATA = RegistryData(
     description = "Initialize a new Shipyard project.",
     help = "Create a new Shipyard project.",
     hidden = False,
-    entrypoint = "init.main:command"
+    entrypoint = "main:command",
+    has_child = False
 )

@@ -24,64 +24,23 @@ DEFAULT_CONFIG: dict[str, Any] = {
 }
 
 DEFAULT_TOML = """
-[app]
-TEST_DIR = "./test/"
+[project]
+name = "My Project"
+version = "0.1.0"
+description = "A simple project built with Shipyard."
 
-[style]
-theme = "tokyo-night"
-border = true
-padding = 2
-window_margin_y = 1
-window_margin_x = 3
-refresh_rate = 60
+[github]
+repository = "https://github.com/Akkiraj1234/Shipyard"
+default_branch = "main"
 
+[files]
+roadmap = "ROADMAP.md"
+tasks = "TASKS.md"
+ideas = "IDEAS.md"
+changelog = "CHANGELOG.md"
 
-[custom.Theme.dark-god]
-Text = None
-Text_Active = None
-Text_Inactive = None
-
-Border = None
-Border_Active = None
-Border_Inactive = None
-
-Main_Border = None
-Main_Border_Active = None
-Main_Border_Inactive = None
-
-H1 = None
-H1_Active = None
-H1_Inactive = None
-
-H2 = None
-H2_Active = None
-H2_Inactive = None
-
-Command = None
-Command_Active = None
-Command_Inactive = None
-
-Suggestion = None
-Suggestion_Active = None
-Suggestion_Inactive = None
-
-# Status messages
-Error = None
-Error_Active = None
-Error_Inactive = None
-
-Warning = None
-Warning_Active = None
-Warning_Inactive = None
-
-Success = None
-Success_Active = None
-Success_Inactive = None
-
-# Selection / focus
-Selected = None
-Focused = None
-Disabled = None
+[settings]
+auto_sync = true
 """
 
 
@@ -120,14 +79,14 @@ def find_config(start: Path | None = None) -> dict[str, Any]:
 
     Starting from ``start`` (or the current working directory if not
     provided), this function searches parent directories for a
-    ``testpy.toml`` file up to ``RECURSIVE_CONFIG_SEARCH`` levels.
+    ``shipyard.toml`` file up to ``RECURSIVE_CONFIG_SEARCH`` levels.
 
     If a configuration file is found, its contents are merged with
     ``DEFAULT_CONFIG`` and returned. A ``root`` key containing the
     directory where the configuration file was found is added to the
     resulting configuration.
 
-    If no configuration file is found, a default ``testpy.toml`` file is
+    If no configuration file is found, a default ``shipyard.toml`` file is
     created in the current working directory (if it does not already
     exist), and the default configuration is returned with ``root`` set
     to the current working directory.

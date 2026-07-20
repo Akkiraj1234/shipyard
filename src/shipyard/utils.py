@@ -205,5 +205,24 @@ def safe_read(path: Path | str) -> dict[str, str] | str | None:
     return data
 
 
-def error_to_warning(error_list: list[Exception]):
-    pass
+def import_file(path: Path, cache: bool = False) -> ModuleType:
+    """Import a Python source file, optionally retaining it in ``sys.modules``."""
+    path = path.resolve()
+    digest = hashlib.sha256(os.fspath(path).encode()).hexdigest()[:12]
+    name = f"_shipyard_metadata_{path.stem}_{digest}"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"could not create an import specification for {path}")
+    module = importlib.util.module_from_spec(spec)
+    if cache:
+        import sys
+        sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def error_to_warning(error_list: list[Exception]) -> None:
+    """Write non-fatal registry failures to stderr."""
+    import sys
+    for error in error_list:
+        print(f"warning: {error}", file=sys.stderr)

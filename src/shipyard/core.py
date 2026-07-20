@@ -1,145 +1,157 @@
+from __future__ import annotations
+
+from collections.abc import Callable
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 
-from .types import CommandRegistry, RegistryData
+from .error import RegistryError, UsageError
 from .parser import ParserStream
-from .error import RegistryError
-from .utils import (
-    import_file, 
-    resolve_entrypoint, 
-    error_to_warning
-)
-
+from .types import CommandRegistry, GrammarRegistry, ParseResult, RegistryData
+from .utils import error_to_warning, import_file, load_module
 
 
 class Command:
-    
+    """A lazily-loaded command discovered from a ``metadata.py`` file."""
+
     def __init__(self, data: RegistryData):
         self.data = data
-    
+        self._built = False
+        self.registry: CommandRegistry = {}
+        self.module: ModuleType | None = None
+
     @property
-    def name(self):
+    def name(self) -> str:
         return self.data.name
-    
-    def get_child(self, name: str) -> "Command":
-        data = self.registery.get(name, None)
-        return data
-    
-    def grammar(self):
-        pass
-    
-    def build(self):
-        registery, _ = create_registry(self.data.path)
-        self.registery = registery
-    
-    def run(self):
-        print(f"command has been runned {self.data.name}")
-    
-    def __bool__(self):
-        return bool(self.data)
+
+    def build(self) -> None:
+        if self._built:
+            return
+
+        if self.data.path is None:
+            raise RuntimeError(f"command '{self.data.name}' has no source path")
+
+        children_path = self.data.path / "commands"
+        if children_path.is_dir():
+            self.registry, _ = create_registry(children_path)
+
+        if self.data.entrypoint:
+            module_path, separator, attribute = self.data.entrypoint.partition(":")
+            if not separator or not attribute:
+                raise UsageError(
+                    f"invalid entrypoint for '{self.data.name}': {self.data.entrypoint}"
+                )
+            module = load_module(Path(module_path))
+            if not isinstance(module, ModuleType):
+                raise RuntimeError(f"invalid module for command '{self.data.name}'")
+            if not callable(getattr(module, attribute, None)):
+                raise UsageError(
+                    f"entrypoint '{self.data.entrypoint}' is not callable"
+                )
+            self.module = module
+
+        self._built = True
+
+    def grammar(self) -> GrammarRegistry:
+        if not self._built:
+            raise RuntimeError("command must be built before reading its grammar")
+        options = set(getattr(self.module, "options", {}).keys()) if self.module else set()
+        flags = set(getattr(self.module, "flags", set())) if self.module else set()
+        return GrammarRegistry(
+            has_child=bool(self.registry),
+            words=set(self.registry) if self.registry else set(getattr(self.module, "words", set())),
+            options=options,
+            flags=flags | {"help"},
+        )
+
+    def get_child(self, name: str) -> Command:
+        try:
+            return Command(self.registry[name])
+        except KeyError as error:
+            raise UsageError(f"unknown command '{name}'") from error
+
+    def run(self, result: ParseResult) -> int:
+        if self.module is None:
+            return 0
+        entrypoint = self.data.entrypoint.rpartition(":")[2]
+        handler: Callable[[ParseResult], Any] = getattr(self.module, entrypoint)
+        status = handler(result)
+        return 0 if status is None else int(status)
 
 
 def create_registry(path: Path, show_error: bool = True) -> tuple[CommandRegistry, list[RegistryError]]:
-    """
-    Discover commands and build a registry from their metadata.
-
-    Each subdirectory is scanned for a ``metadata.py`` file. Valid command
-    metadata is normalized, resolved, and added to the returned registry.
-    Any errors encountered during discovery are collected and returned.
-    """
-    # TODO: fix duplicate commad issue later
-    
+    """Discover immediate child commands without importing their implementations."""
     registry: CommandRegistry = {}
     errors: list[RegistryError] = []
-    
-    for item in path.iterdir():
-        if not item.is_dir():
-            continue
-        
+    if not path.is_dir():
+        return registry, errors
+
+    for item in sorted(path.iterdir()):
         metadata_file = item / "metadata.py"
-        
-        if not metadata_file.is_file():
+        if not item.is_dir() or not metadata_file.is_file():
             continue
-        
         try:
-            module = import_file(
-                path = metadata_file,
-                cache = False
-            )
-            metadata = module.METADATA
-        
+            metadata_module = import_file(metadata_file, cache=False)
+            metadata = metadata_module.METADATA
             if not isinstance(metadata, RegistryData):
-                raise TypeError("METADATA must be a RegistryData instance.")
-            
+                raise TypeError("METADATA must be a RegistryData instance")
+            if metadata.name in registry:
+                raise ValueError(f"duplicate command name '{metadata.name}'")
             metadata.path = item.resolve()
-            metadata.entrypoint = resolve_entrypoint(
-                metadata.entrypoint
-            )
-        
+            if metadata.entrypoint:
+                module_name, separator, attribute = metadata.entrypoint.partition(":")
+                if not separator or not module_name or not attribute:
+                    raise ValueError("entrypoint must have the form 'module:callable'")
+                module_file = item / f"{module_name.replace('.', '/')}.py"
+                metadata.entrypoint = f"{module_file}:{attribute}"
             registry[metadata.name] = metadata
-        
-        except Exception as e:
-            errors.append(
-                RegistryError(
-                    command = item.name,
-                    path = metadata_file,
-                    cause = e
-                )
-            )
+        except Exception as error:
+            errors.append(RegistryError(item.name, metadata_file, error))
+
     if show_error:
         error_to_warning(errors)
-    
     return registry, errors
 
 
-def build_root_command(path: Path) -> Command:
-    """
-    it will try to create a registery of commands
-    by scanning foldder where each command registery
-    folder inside .commands should have __init__.py 
-    which should contain metadata of commands.
-    its scan them and build command registery and then
-    root command
-    """
-    
-    registery, _ = create_registry(Path)
-    
-    
-        
-    
-    
-        
-    
+def build_root_command() -> Command:
+    root = Path(__file__).resolve().parent
+    return Command(
+        RegistryData(
+            name="shipyard",
+            description="Developer workflow and project management CLI.",
+            help="Shipyard manages repository metadata.",
+            hidden=False,
+            entrypoint=None,
+            has_child=True,
+            path=root,
+        )
+    )
+
+
+def command_help(command: Command) -> str:
+    command.build()
+    command_name = "" if command.name == "shipyard" else f" {command.name}"
+    lines = [f"Usage: shipyard{command_name}", "", command.data.description]
+    visible = [data for data in command.registry.values() if not data.hidden]
+    if visible:
+        lines.extend(["", "Commands:"])
+        lines.extend(f"  {data.name:<12} {data.description}" for data in visible)
+    if command.module and (getattr(command.module, "options", {}) or getattr(command.module, "flags", set())):
+        lines.extend(["", "Options:"])
+        lines.extend(f"  --{name}" for name in getattr(command.module, "options", {}))
+        lines.extend(f"  --{name}" for name in getattr(command.module, "flags", set()))
+    return "\n".join(lines)
 
 
 def execute(parser_stream: ParserStream, command: Command) -> int:
-    """
-    Resolve and execute a command from the command hierarchy.
-
-    Starting with the provided command, the executor builds its grammar and
-    parses the current input. If a child command is matched, execution
-    continues with that child. Once a leaf command is reached, it is
-    executed and its exit status is returned.
-    """
-
-    if parser_stream is None:
-        raise ValueError("parser cannot be None")
-
-    if command is None:
-        raise ValueError("command cannot be None")
-
-    while command:
+    """Resolve the command hierarchy, validate arguments, and dispatch once."""
+    while True:
         command.build()
-
-        parser_result = parser_stream.parse(
-            command.grammar()
-        )
-
-        if parser_result.child:
-            command = command.get_child(
-                parser_result.child
-            )
+        result = parser_stream.parse(command.grammar())
+        if result.child:
+            command = command.get_child(result.child)
             continue
-
-        return command.run(parser_result)
-
-    raise RuntimeError("Execution terminated unexpectedly.")
+        if "help" in result.flags:
+            print(command_help(command))
+            return 0
+        return command.run(result)

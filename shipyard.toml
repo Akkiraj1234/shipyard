@@ -1,0 +1,17 @@
+[project]
+name = "My Project"
+version = "0.1.0"
+description = "A simple project built with Shipyard."
+
+[github]
+repository = "https://github.com/Akkiraj1234/Shipyard"
+default_branch = "main"
+
+[files]
+roadmap = "ROADMAP.md"
+tasks = "TASKS.md"
+ideas = "IDEAS.md"
+changelog = "CHANGELOG.md"
+
+[settings]
+auto_sync = true

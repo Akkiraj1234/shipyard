@@ -13,30 +13,32 @@ from .utils import (
 
 class Command:
     
-    def __init__(self):
-        pass
+    def __init__(self, data: RegistryData):
+        self.data = data
     
     @property
-    def name(self) -> str:
-        pass
+    def name(self):
+        return self.data.name
     
-    def get_child(self, name: str) -> Command:
-        pass
+    def get_child(self, name: str) -> "Command":
+        data = self.registery.get(name, None)
+        return data
     
     def grammar(self):
         pass
     
     def build(self):
-        pass
+        registery, _ = create_registry(self.data.path)
+        self.registery = registery
     
     def run(self):
-        pass
+        print(f"command has been runned {self.data.name}")
     
     def __bool__(self):
-        return True
+        return bool(self.data)
 
 
-def create_registry(path: Path) -> tuple[CommandRegistry, list[RegistryError]]:
+def create_registry(path: Path, show_error: bool = True) -> tuple[CommandRegistry, list[RegistryError]]:
     """
     Discover commands and build a registry from their metadata.
 
@@ -83,7 +85,9 @@ def create_registry(path: Path) -> tuple[CommandRegistry, list[RegistryError]]:
                     cause = e
                 )
             )
-            
+    if show_error:
+        error_to_warning(errors)
+    
     return registry, errors
 
 
@@ -96,10 +100,13 @@ def build_root_command(path: Path) -> Command:
     its scan them and build command registery and then
     root command
     """
-    registery, error = create_registry(Path)
     
-    if error:
-        error_to_warning(registery)
+    registery, _ = create_registry(Path)
+    
+    
+        
+    
+    
         
     
 

@@ -30,6 +30,7 @@ from .types import (
     TokenType 
 )
 from .utils import ListStream
+from .error import ShipyardParserError
 
 if TYPE_CHECKING:
     from .core import Command
@@ -144,7 +145,7 @@ class ParserStream(ListStream):
         self.grammar_registry = grammar
         
         if self.grammar_registry is None:
-            raise ValueError("Invalid grammar registry for token stream.")
+            raise ShipyardParserError(self, "Invalid grammar registry for token stream.")
         
         if self.current is None:
             return ParseResult()
@@ -157,7 +158,7 @@ class ParserStream(ListStream):
             child = self.current["value"]
             
             if child not in self.grammar_registry.words:
-                raise ValueError(f"invalid subcommand {child}")
+                raise ShipyardParserError(self, f"invalid subcommand {child}")
             
             self.move()
             return ParseResult(child = child)

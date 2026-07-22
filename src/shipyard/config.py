@@ -6,22 +6,9 @@ from typing import Any
 import tomllib
 import tomli_w
 
+from .utils import merge_dicts
+from .error import ShipYardConfigNotFoundError
 
-RECURSIVE_CONFIG_SEARCH = 5
-CONFIG_FILE_NAME = "shipyard.toml"
-
-# Default config for application
-DEFAULT_CONFIG: dict[str, Any] = {
-    "theme": "dark",
-    "refresh_rate": 60,
-    "ui": {
-        "border": True,
-        "padding": 2,
-        "window_margin_y": 1,
-        "window_margin_x": 3,
-    },
-    "TEST_DIR": "./test/",
-}
 
 DEFAULT_TOML = """
 [project]
@@ -43,64 +30,32 @@ changelog = "CHANGELOG.md"
 auto_sync = true
 """
 
+RECURSIVE_CONFIG_SEARCH = 5
+CONFIG_FILE_NAME = "shipyard.toml"
+DEFAULT_CONFIG = tomllib.loads(DEFAULT_TOML)
 
-def merge_dicts(defaults: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+
+
+def load_config(start: Path | None = None) -> dict[str, Any]:
     """
-    Recursively merge a user configuration into the default configuration.
+    Load an existing ``shipyard.toml`` configuration.
 
-    Nested dictionaries are merged key by key, while non-dictionary values
-    from the user configuration override the corresponding default values.
+    Searches from ``start`` (or the current working directory) upwards for up
+    to ``RECURSIVE_CONFIG_SEARCH`` parent directories. The loaded
+    configuration is merged with the default configuration before being
+    returned.
 
     Args:
-        defaults: Base configuration containing default values.
-        user: User-provided configuration values.
+        start: Directory to begin searching from.
 
     Returns:
-        A new dictionary containing the merged configuration. The input
-        dictionaries are not modified.
+        The merged configuration dictionary.
+
+    Raises:
+        ShipYardConfigNotFoundError: If no ``shipyard.toml`` file is found.
     """
+    current = (start or Path.pwd()).resolve()
     
-    merged = deepcopy(defaults)
-
-    def merge_into(target: dict[str, Any], incoming: dict[str, Any]) -> None:
-        for key, value in incoming.items():
-            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
-                merge_into(target[key], value)
-            else:
-                target[key] = value
-
-    merge_into(merged, user)
-    return merged
-
-
-def find_config(start: Path | None = None) -> dict[str, Any]:
-    """
-    Locate, load, and merge the project configuration.
-
-    Starting from ``start`` (or the current working directory if not
-    provided), this function searches parent directories for a
-    ``shipyard.toml`` file up to ``RECURSIVE_CONFIG_SEARCH`` levels.
-
-    If a configuration file is found, its contents are merged with
-    ``DEFAULT_CONFIG`` and returned. A ``root`` key containing the
-    directory where the configuration file was found is added to the
-    resulting configuration.
-
-    If no configuration file is found, a default ``shipyard.toml`` file is
-    created in the current working directory (if it does not already
-    exist), and the default configuration is returned with ``root`` set
-    to the current working directory.
-
-    Args:
-        start: Directory from which to begin the search.
-
-    Returns:
-        The resolved configuration dictionary with default values applied
-        and a ``root`` key indicating the project root directory.
-    """
-    
-    current = (start or Path.cwd()).resolve()
-
     for _ in range(RECURSIVE_CONFIG_SEARCH):
         config_path = current / CONFIG_FILE_NAME
         
@@ -117,12 +72,28 @@ def find_config(start: Path | None = None) -> dict[str, Any]:
 
         current = current.parent
     
-    config_path = Path.cwd().resolve() / CONFIG_FILE_NAME
+    raise ShipYardConfigNotFoundError()
+
+
+def create_config(dir_path: Path | None = None) -> dict[str, Any]:
+    """
+    Create a default ``shipyard.toml`` if one does not already exist.
+
+    If a configuration file already exists, it is left unchanged.
+
+    Args:
+        dir_path: Directory where the configuration file should be created.
+
+    Returns:
+        A copy of the default configuration dictionary.
+    """
+    current = (dir_path or Path.pwd()).resolve()
+    file_path = current / CONFIG_FILE_NAME
     
-    if not config_path.exists():
-        with config_path.open("wb") as file:
+    if not file_path.is_file():
+        with file_path.open("wb") as file:
             tomli_w.dump(DEFAULT_CONFIG, file)
-    
+            
     merged = deepcopy(DEFAULT_CONFIG)
-    merged["root"] = str(Path.cwd().resolve())
+    merged["root"] = str(current)
     return merged

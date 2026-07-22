@@ -4,7 +4,7 @@ import sys
 from .parser import create_parser
 from .core import execute
 from .shipyard import build_root_command
-from .error import ShipyardError
+from .error import ShipyardError, shipyard_error_print
 
 
 def main() -> int:
@@ -22,7 +22,7 @@ def main() -> int:
         return execute(stream, command)
     
     except ShipyardError as error:
-        return error.io_print()
+        return shipyard_error_print(error)
 
     except Exception as error:
         print(f"Unknown error: {error}", file=sys.stderr)

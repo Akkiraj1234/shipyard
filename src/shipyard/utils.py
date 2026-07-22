@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from types import ModuleType
 from typing import Any, List, TYPE_CHECKING
+from difflib import get_close_matches
+from copy import deepcopy
 
 if TYPE_CHECKING:
     from .core import Command
@@ -226,3 +228,39 @@ def error_to_warning(error_list: list[Exception]) -> None:
     import sys
     for error in error_list:
         print(f"warning: {error}", file=sys.stderr)
+
+
+def merge_dicts(defaults: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively merge a user configuration into the default configuration.
+
+    Nested dictionaries are merged key by key, while non-dictionary values
+    from the user configuration override the corresponding default values.
+
+    Args:
+        defaults: Base configuration containing default values.
+        user: User-provided configuration values.
+
+    Returns:
+        A new dictionary containing the merged configuration. The input
+        dictionaries are not modified.
+    """
+    
+    merged = deepcopy(defaults)
+
+    def merge_into(target: dict[str, Any], incoming: dict[str, Any]) -> None:
+        for key, value in incoming.items():
+            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                merge_into(target[key], value)
+            else:
+                target[key] = value
+
+    merge_into(merged, user)
+    return merged
+
+
+def best_matches(word: str, choices: list[str], n: int = 3) -> list[str]:
+    """
+    Return the `n` closest matches to `word` from `choices`.
+    """
+    return get_close_matches(word, choices, n=n, cutoff=0.0)

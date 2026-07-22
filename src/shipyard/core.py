@@ -12,8 +12,10 @@ from .utils import error_to_warning, import_file, load_module
 
 
 class Command:
-    """A lazily-loaded command discovered from a ``metadata.py`` file."""
-
+    """
+    A lazily-loaded command discovered from a ``metadata.py`` file.
+    """
+    
     def __init__(self, data: RegistryData):
         self.data = data
         self._built = False

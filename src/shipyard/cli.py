@@ -2,9 +2,9 @@ from __future__ import annotations
 import sys
 
 from .parser import create_parser
-from .core import execute
+from .core import build_core_flag, cleanup, execute
 from .shipyard import build_root_command
-from .error import ShipyardError, shipyard_error_print
+from .error import shipyard_error_print
 
 
 def main() -> int:
@@ -17,16 +17,16 @@ def main() -> int:
     
     stream = create_parser(sys.argv)
     command = build_root_command()
+    ctx = build_core_flag(stream)
     
     try: 
-        return execute(stream, command)
+        return execute(stream, command, ctx)
     
-    except ShipyardError as error:
-        return shipyard_error_print(error)
-
     except Exception as error:
-        print(f"Unknown error: {error}", file=sys.stderr)
-        return 2
+        return shipyard_error_print(error, ctx)
+    
+    finally:
+        cleanup(command, ctx)
 
 
 if __name__ == "__main__":

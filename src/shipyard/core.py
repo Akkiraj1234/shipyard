@@ -157,3 +157,11 @@ def execute(parser_stream: ParserStream, command: Command) -> int:
             print(command_help(command))
             return 0
         return command.run(result)
+
+
+def build_core_flag(parser, ctx: dict[str, any]):
+    pass
+
+
+def cleanup(command: Command, ctx: dict[str, any]):
+    pass

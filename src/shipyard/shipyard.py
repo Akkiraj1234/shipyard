@@ -1,6 +1,10 @@
 from .__version__ import __version__
-
+from .core import Command
 
 
 def build_root_command():
-  pass
+    pass
+
+
+class RootCommand(Command):
+    pass

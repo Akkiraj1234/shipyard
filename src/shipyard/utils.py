@@ -1,16 +1,20 @@
 from __future__ import annotations
+from collections.abc import Generator
+from difflib import get_close_matches
+from contextlib import contextmanager
+from pathlib import Path
+from copy import deepcopy
+from typing import IO, Any, List, TYPE_CHECKING
+from types import ModuleType
 
 import hashlib
 import importlib
 import importlib.util
-import json
-import os
 import tempfile
-from pathlib import Path
-from types import ModuleType
-from typing import Any, List, TYPE_CHECKING
-from difflib import get_close_matches
-from copy import deepcopy
+import sys
+import os
+
+from .error import ShipyardFileError
 
 if TYPE_CHECKING:
     from .core import Command
@@ -93,6 +97,173 @@ class ListStream:
         return self.__str__()
 
 
+def atomic_write(
+    path: Path | str, 
+    data: str, 
+    *,
+    create: bool = False
+    
+) -> None:
+    """
+    Atomically write text to a file.
+
+    The text is written to a temporary file in the destination directory,
+    flushed and synchronized to disk, and then atomically replaces the
+    target using :func:`os.replace`.
+
+    Args:
+        path:
+            Path to the destination file.
+
+        data:
+            Text to write.
+
+        create:
+            If ``False`` (default), the destination file must already exist.
+            If ``True``, parent directories are created as needed and the
+            destination file is created if it does not exist.
+
+    Raises:
+        ShipyardFileError:
+            If the destination file does not exist when ``create=False``,
+            or if ``path`` refers to a directory.
+
+        TypeError:
+            If ``data`` is not a string.
+    """
+    target = Path(path)
+    
+    if not target.exists() and not create:
+        raise ShipyardFileError(f"file does not exist: {target}")
+    
+    if target.exists() and target.is_dir():
+        raise ShipyardFileError(f"path is a directory, not a file: {target}")
+    
+    if not isinstance(data, str):
+        raise TypeError(f"data must be str, not {type(data).__name__}")
+
+    
+    # for safety
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=target.parent,
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            delete=False,
+        
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(data)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+
+        # idk if its needed since file created by python themselves
+        # if target.exists():
+        #     shutil.copymode(target, temporary_path)
+        
+        os.replace(temporary_path, target)
+        # make sure replace reach disk
+        try:
+            dir_fd = os.open(target.parent, os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except OSError:
+            pass
+        
+        temporary_path = None
+    
+    except OSError as exc:
+        raise ShipyardFileError(str(exc)) from exc
+    
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    
+
+@contextmanager
+def safe_open(
+    path: Path | str, 
+    binary: bool = False
+    
+) -> Generator[IO[str] | IO[bytes] | None, None, None]:
+    """
+    Safely open a file for reading.
+
+    Yields an open file object in text or binary mode. If the file does not
+    exist, ``None`` is yielded instead of raising
+    :class:`FileNotFoundError`.
+
+    Raises:
+        ShipyardFileError: If the file cannot be opened for any reason other
+            than it not existing.
+    """
+    
+    target = Path(path)
+    mode = "rb" if binary else "r"
+    kwargs = {} if binary else {"encoding": "utf-8"}
+    
+    try: 
+        with target.open(mode, **kwargs) as file:
+            yield file
+        
+    except FileNotFoundError:
+        yield None
+        
+    except OSError as exc:
+        raise ShipyardFileError(str(exc)) from exc
+        
+
+def merge_dicts(defaults: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively merge a user configuration into the default configuration.
+
+    Nested dictionaries are merged key by key, while non-dictionary values
+    from the user configuration override the corresponding default values.
+
+    Args:
+        defaults: Base configuration containing default values.
+        user: User-provided configuration values.
+
+    Returns:
+        A new dictionary containing the merged configuration. The input
+        dictionaries are not modified.
+    """
+    
+    merged = deepcopy(defaults)
+
+    def merge_into(target: dict[str, Any], incoming: dict[str, Any]) -> None:
+        for key, value in incoming.items():
+            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                merge_into(target[key], value)
+            else:
+                target[key] = value
+
+    merge_into(merged, user)
+    return merged
+
+
+def best_matches(word: str, choices: list[str], n: int = 3) -> list[str]:
+    """
+    Return the `n` closest matches to `word` from `choices`.
+    """
+    return get_close_matches(word, choices, n=n, cutoff=0.0)
+
+
+def error_to_warning(error_list: list[Exception]) -> None:
+    """
+    Write non-fatal error to stderr.
+    """
+    for error in error_list:
+        print(f"warning: {error}", file=sys.stderr)
+
+
 def load_module(module: str | Path | Command) -> ModuleType | Command:
     """Load a Python module by dotted name or file path.
 
@@ -136,79 +307,10 @@ def load_module(module: str | Path | Command) -> ModuleType | Command:
     return loaded_module
 
 
-def atomic_write(path: Path | str, data: dict[str, str] | str) -> None:
-    """Atomically replace *path* with text or a JSON object.
-
-    Dictionaries are written as stable, indented JSON.  The temporary file is
-    created beside the target so ``os.replace`` is atomic on the same
-    filesystem.  Parent directories are created when needed.
-    """
-    target = Path(path)
-    if target.exists() and target.is_dir():
-        raise IsADirectoryError(target)
-
-    if isinstance(data, dict):
-        if not all(
-            isinstance(key, str) and isinstance(value, str)
-            for key, value in data.items()
-        ):
-            raise TypeError("dictionary data must have string keys and values")
-        contents = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    elif isinstance(data, str):
-        contents = data
-    else:
-        raise TypeError("data must be a string or a dictionary of strings")
-
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=target.parent,
-            prefix=f".{target.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as temporary_file:
-            temporary_path = Path(temporary_file.name)
-            temporary_file.write(contents)
-            temporary_file.flush()
-            os.fsync(temporary_file.fileno())
-
-        os.replace(temporary_path, target)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
-
-
-def safe_read(path: Path | str) -> dict[str, str] | str | None:
-    """Read a UTF-8 file, returning ``None`` when it does not exist.
-
-    JSON files written by :func:`atomic_write` are decoded back into a mapping;
-    all other files are returned as text.  Read and decode errors are allowed
-    to propagate so callers do not silently operate on corrupt metadata.
-    """
-    target = Path(path)
-    try:
-        contents = target.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return None
-
-    if target.suffix.lower() != ".json":
-        return contents
-
-    data = json.loads(contents)
-    if not isinstance(data, dict) or not all(
-        isinstance(key, str) and isinstance(value, str)
-        for key, value in data.items()
-    ):
-        raise ValueError(f"expected a JSON object with string keys and values: {target}")
-    return data
-
-
 def import_file(path: Path, cache: bool = False) -> ModuleType:
-    """Import a Python source file, optionally retaining it in ``sys.modules``."""
+    """
+    Import a Python source file, optionally retaining it in ``sys.modules``.
+    """
     path = path.resolve()
     digest = hashlib.sha256(os.fspath(path).encode()).hexdigest()[:12]
     name = f"_shipyard_metadata_{path.stem}_{digest}"
@@ -221,46 +323,3 @@ def import_file(path: Path, cache: bool = False) -> ModuleType:
         sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
-
-
-def error_to_warning(error_list: list[Exception]) -> None:
-    """Write non-fatal registry failures to stderr."""
-    import sys
-    for error in error_list:
-        print(f"warning: {error}", file=sys.stderr)
-
-
-def merge_dicts(defaults: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
-    """
-    Recursively merge a user configuration into the default configuration.
-
-    Nested dictionaries are merged key by key, while non-dictionary values
-    from the user configuration override the corresponding default values.
-
-    Args:
-        defaults: Base configuration containing default values.
-        user: User-provided configuration values.
-
-    Returns:
-        A new dictionary containing the merged configuration. The input
-        dictionaries are not modified.
-    """
-    
-    merged = deepcopy(defaults)
-
-    def merge_into(target: dict[str, Any], incoming: dict[str, Any]) -> None:
-        for key, value in incoming.items():
-            if key in target and isinstance(target[key], dict) and isinstance(value, dict):
-                merge_into(target[key], value)
-            else:
-                target[key] = value
-
-    merge_into(merged, user)
-    return merged
-
-
-def best_matches(word: str, choices: list[str], n: int = 3) -> list[str]:
-    """
-    Return the `n` closest matches to `word` from `choices`.
-    """
-    return get_close_matches(word, choices, n=n, cutoff=0.0)

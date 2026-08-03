@@ -23,6 +23,11 @@ class ShipyardError(Exception):
         super().__init__(*args)
 
 
+class ShipyardFileError(ShipyardError):
+    def __init__(self, *args):
+        super().__init__(*args)
+        
+
 class ShipyardParserError(ShipyardError):
     def __init__(self, strem: ParserStream, message: str, *args):
         self.strem: ParserStream = ParserStream

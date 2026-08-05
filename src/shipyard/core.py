@@ -64,7 +64,7 @@ class Command(ABC):
         ...
         
     def _get_child_helper(self, name: str) -> Command:
-        curr, childs = self.metadata()
+        metadata = self.metadata()
 
 
 def command_help(command: Command) -> str:

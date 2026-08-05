@@ -61,10 +61,9 @@ class RegistryData:
     description: str
     help: str
     hidden: bool
-    entrypoint: str | None
     has_child: bool = False
-
     path: Path | None = None
+    child_path: Path | None = None
 
 
 TokenList: TypeAlias = list[Token]

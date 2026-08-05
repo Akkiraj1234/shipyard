@@ -1,13 +1,41 @@
 from .__version__ import __version__
+from .types import RegistryData
 from .core import Command
-
+from pathlib import Path
 
 def build_root_command():
     pass
 
 
-class RootCommand(Command):
-    pass
+SHIPYARD_METAATA = RegistryData(
+    name = "shipyard",
+    description = "A Git-inspired project companion for managing project metadata, roadmaps, releases, and documentation.",
+    help = "here are all the shipyard commands",
+    hidden = False,
+    has_child = True,
+    path = None,
+    child_path = Path(__file__).resolve().parent / "commands"
+)
+
+class Shipyard_Command(Command):
+    def __init__(self, root_ctx, name = None):
+        name = "shipyard"
+        super().__init__(root_ctx, name)
+    
+    def metadata(self):
+        return SHIPYARD_METAATA
+    
+    def grammar(self):
+        pass
+    
+    def get_child(self):
+        pass
+    
+    def get_child_metadata(self):
+        pass
+    
+    def run(self):
+        pass
 
 
 # def create_registry(path: Path, show_error: bool = True) -> tuple[CommandRegistry, list[RegistryError]]:

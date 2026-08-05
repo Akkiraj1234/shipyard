@@ -3,7 +3,7 @@ import sys
 
 from .parser import create_parser
 from .core import build_core_flag, cleanup, execute
-from .shipyard import RootCommand
+from .shipyard import Shipyard_Command
 from .error import shipyard_error_print
 
 
@@ -17,7 +17,8 @@ def main() -> int:
     
     stream = create_parser(sys.argv)
     ctx = build_core_flag(stream)
-    command = RootCommand(ctx)
+    command = Shipyard_Command(ctx)
+    print(command.metadata())
     
     try: 
         return execute(stream, command, ctx)

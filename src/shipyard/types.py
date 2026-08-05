@@ -23,7 +23,7 @@ class Token(TypedDict):
     """
 
     type: TokenType
-    name: str | None
+    name: str
     value: str | None
 
 

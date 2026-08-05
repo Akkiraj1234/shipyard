@@ -4,8 +4,14 @@ from typing import Any
 
 from .config import load_config
 from .parser import ParserStream
-from .types import TokenList, TokenType, GrammarRegistry, RegistryData, ParseResult
-from .parser import ParserStreams
+from .types import (
+    TokenList,
+    TokenType, 
+    GrammarRegistry,
+    RegistryData, 
+    ParseResult
+)
+from .parser import ParserStream
 
 
 
@@ -88,7 +94,7 @@ def execute(parser_stream: ParserStream, command: Command) -> int:
         return command.run(result)
 
 
-def build_core_flag(parser: ParserStreams) -> dict[str, bool]:
+def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     """
     Extract recognized root-level flags from the token stream.
 
@@ -112,9 +118,9 @@ def build_core_flag(parser: ParserStreams) -> dict[str, bool]:
     result: dict[str, bool] = {}
 
     for token in items:
-        if token.type is TokenType.flag and token.name in _CORE_ROOT_FLAGS:
-            result[token.name] = True
-
+        if token["type"] is TokenType.flag and token["name"] in _CORE_ROOT_FLAGS:
+            result[token["name"]] = True
+            
     return result
 
 

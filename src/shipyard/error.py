@@ -53,7 +53,7 @@ class ShipyardParserError(ShipyardError):
         print(" ".join(secoend))
         print("Did you mean these")
         
-        for i in range 
+        # for i in range 
             
         
         
@@ -86,4 +86,5 @@ def shipyard_error_print(self, error: ShipyardError):
         print(error)
         return 2
     
-    if isinstance(error, ParserStream)
+    if isinstance(error, ParserStream):
+        pass

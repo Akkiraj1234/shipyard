@@ -6,6 +6,6 @@ METADATA = RegistryData(
     description = "Check the Shipyard installation and project environment.",
     help = "Run diagnostics to verify the current Shipyard setup.",
     hidden = False,
-    entrypoint = "main:command",
+    # entrypoint = "main:command",
     has_child = False
 )

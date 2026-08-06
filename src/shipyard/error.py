@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .parser import ParserStream
@@ -30,7 +30,7 @@ class ShipyardFileError(ShipyardError):
 
 class ShipyardParserError(ShipyardError):
     def __init__(self, strem: ParserStream, message: str, *args):
-        self.strem: ParserStream = ParserStream
+        self.strem: ParserStream = strem
         self.message: str = message
         super().__init__(*args)
         
@@ -48,13 +48,7 @@ class ShipyardParserError(ShipyardError):
             
             first.append(f"item ")
             secoend.append(f"{(len(item)+1)*' '}")
-        
-        print(" ".join(first))
-        print(" ".join(secoend))
-        print("Did you mean these")
-        
-        for i in range 
-            
+        return f"{' '.join(first)}\n{' '.join(first)}" 
         
         
             
@@ -81,9 +75,12 @@ class ShipYardConfigNotFoundError(ShipyardError):
     
 
 
-def shipyard_error_print(self, error: ShipyardError):
+def shipyard_error_print(error: ShipyardError, ctx: dict[str, Any]):
     if not isinstance(error, ShipyardError):
         print(error)
         return 2
     
-    if isinstance(error, ParserStream)
+    print(error)
+    return 2
+    
+    # if isinstance(error, ParserStream)

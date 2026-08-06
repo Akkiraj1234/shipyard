@@ -20,9 +20,12 @@ def main() -> int:
     command = RootCommand(ctx)
     
     try: 
+        print(command.child_metadata())
+        print(command.grammar())
         return execute(stream, command, ctx)
     
     except Exception as error:
+        raise error
         return shipyard_error_print(error, ctx)
     
     finally:

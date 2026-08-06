@@ -93,15 +93,15 @@ def classify_token_type(stream: ListStream) -> Token:
         else:
             val = {
                 "type": TokenType.flag,
-                "name": None,
-                "value": strip_prefix(stream.current),
+                "name": strip_prefix(stream.current),
+                "value": None
             }
         
     else:
         val = {
             "type": TokenType.word,
-            "name": None,
-            "value": stream.current,
+            "name": stream.current,
+            "value": None,
         }
     
     stream.next()
@@ -152,10 +152,10 @@ class ParserStream(ListStream):
         
         if (
             self.grammar_registry.has_child and
-            self.current["type"] == TokenType.word and 
+            self.current["name"] == TokenType.word and 
             bool(self.grammar_registry.words)
         ):
-            child = self.current["value"]
+            child = self.current["name"]
             
             if child not in self.grammar_registry.words:
                 raise ShipyardParserError(self, f"invalid subcommand {child}")
@@ -175,15 +175,15 @@ class ParserStream(ListStream):
             token = self.current           
             
             if token["type"] == TokenType.word:
-                if token["value"] not in self.grammar_registry.words:
-                    raise ValueError(f"{token['value']} is not a valid argument")
+                if token["name"] not in self.grammar_registry.words:
+                    raise ValueError(f"{token['name']} is not a valid argument")
 
-                word.append(token["value"])
+                word.append(token["name"])
 
             elif token["type"] == TokenType.flag:
-                if token["value"] not in self.grammar_registry.flags:
-                    raise ValueError(f"{token['value']} is not a valid flag")
-                flag.add(token["value"])
+                if token["name"] not in self.grammar_registry.flags:
+                    raise ValueError(f"{token['name']} is not a valid flag")
+                flag.add(token["name"])
 
             elif token["name"] is not None and token["value"] is not None:
                 if token["name"] not in self.grammar_registry.options:

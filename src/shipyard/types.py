@@ -23,7 +23,7 @@ class Token(TypedDict):
     """
 
     type: TokenType
-    name: str | None
+    name: str 
     value: str | None
 
 
@@ -33,7 +33,7 @@ class GrammarRegistry:
     Grammar definition for a command scope.
     """
     
-    has_child: bool = True
+    has_child: bool = False
     words: set[str] = field(default_factory=set)
     options: set[str] = field(default_factory=set)
     flags: set[str] = field(default_factory=set)
@@ -61,11 +61,9 @@ class RegistryData:
     description: str
     help: str
     hidden: bool
-    entrypoint: str | None
     has_child: bool = False
-
-    path: Path | None = None
-
+    child_path: Path | None = None
+    
 
 TokenList: TypeAlias = list[Token]
 

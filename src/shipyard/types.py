@@ -23,7 +23,7 @@ class Token(TypedDict):
     """
 
     type: TokenType
-    name: str 
+    name: str
     value: str | None
 
 
@@ -62,8 +62,9 @@ class RegistryData:
     help: str
     hidden: bool
     has_child: bool = False
+    path: Path | None = None
     child_path: Path | None = None
-    
+
 
 TokenList: TypeAlias = list[Token]
 

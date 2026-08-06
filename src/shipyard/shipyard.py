@@ -5,7 +5,7 @@ from pathlib import Path
 from .__version__ import __version__
 from .types import RegistryData, CommandRegistry, GrammarRegistry
 from .core import Command
-
+from pathlib import Path
 
 
 SHIPYARD_METADATA = RegistryData(

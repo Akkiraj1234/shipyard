@@ -48,7 +48,17 @@ class ShipyardParserError(ShipyardError):
             
             first.append(f"item ")
             secoend.append(f"{(len(item)+1)*' '}")
+<<<<<<< HEAD
         return f"{' '.join(first)}\n{' '.join(first)}" 
+=======
+        
+        print(" ".join(first))
+        print(" ".join(secoend))
+        print("Did you mean these")
+        
+        # for i in range 
+            
+>>>>>>> dedb9ff2ef0b7a8d1663609db966acff0eb0a8cf
         
         
             
@@ -80,7 +90,12 @@ def shipyard_error_print(error: ShipyardError, ctx: dict[str, Any]):
         print(error)
         return 2
     
+<<<<<<< HEAD
     print(error)
     return 2
     
     # if isinstance(error, ParserStream)
+=======
+    if isinstance(error, ParserStream):
+        pass
+>>>>>>> dedb9ff2ef0b7a8d1663609db966acff0eb0a8cf

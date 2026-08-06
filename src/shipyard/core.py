@@ -164,7 +164,6 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     for token in items:
         if token["type"] is TokenType.flag and token["name"] in _CORE_ROOT_FLAGS:
             result[token["name"]] = True
-
     return result
 
 

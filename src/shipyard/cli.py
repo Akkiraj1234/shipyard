@@ -18,11 +18,8 @@ def main() -> int:
     stream = create_parser(sys.argv)
     ctx = build_core_flag(stream)
     command = Shipyard_Command(ctx)
-    print(command.metadata())
     
     try: 
-        print(command.child_metadata())
-        print(command.grammar())
         return execute(stream, command, ctx)
     
     except Exception as error:

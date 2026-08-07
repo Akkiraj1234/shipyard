@@ -125,6 +125,7 @@ def execute(parser_stream: ParserStream, command: Command, ctx: dict[str, Any]) 
     Resolve the command hierarchy, validate arguments, and dispatch once.
     """
     while True:
+        print(command.grammar())
         result = parser_stream.parse(
             command.grammar()
         )

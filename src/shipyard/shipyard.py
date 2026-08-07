@@ -21,7 +21,7 @@ SHIPYARD_METADATA = RegistryData(
 )
 
 
-class RootCommand(Command):
+class Shipyard_Command(Command):
     def __init__(self, root_ctx, name = None):
         name = "shipyard"
         super().__init__(root_ctx, name)
@@ -31,10 +31,12 @@ class RootCommand(Command):
         return SHIPYARD_METADATA
     
     def grammar(self) -> GrammarRegistry:
+        print("here\n\n", self.child_metadata())
         
         words = self._build_word_by_command_registry(
             self.child_metadata()
         )
+        
         optiones = set()
         flags = {
             "version",

@@ -5,6 +5,7 @@ from pathlib import Path
 from .__version__ import __version__
 from .types import RegistryData, CommandRegistry, GrammarRegistry
 from .core import Command
+from .utils import error_to_warning
 from pathlib import Path
 
 
@@ -31,8 +32,6 @@ class Shipyard_Command(Command):
         return SHIPYARD_METADATA
     
     def grammar(self) -> GrammarRegistry:
-        print("here\n\n", self.child_metadata())
-        
         words = self._build_word_by_command_registry(
             self.child_metadata()
         )
@@ -61,10 +60,12 @@ class Shipyard_Command(Command):
         metadata = self.metadata()
         child_path = metadata.child_path
         
-        self.__child_metadata_data = \
-            self._get_child_metadata(child_path)[0]
+        self.__child_metadata_data, errors = \
+            self._get_child_metadata(child_path)
             
+        error_to_warning(errors)
         return self.__child_metadata_data
     
     def run(self):
         print("i am runninge")
+        return self.bootstrap()

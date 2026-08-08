@@ -5,17 +5,17 @@ from pathlib import Path
 
 from .config import load_config
 from .parser import ParserStream
+from .utils import import_file
+from .error import RegistryError
+
 from .types import (
-    TokenList, 
-    TokenType, 
-    GrammarRegistry, 
-    RegistryData, 
+    TokenList,
+    TokenType,
+    GrammarRegistry,
+    RegistryData,
     ParseResult,
     CommandRegistry
 )
-from .parser import ParserStream
-from .utils import import_file 
-from .error import RegistryError
 
 
 
@@ -43,8 +43,9 @@ class Command(ABC):
         return self.command_name or \
             self.__class__.__name__.lower()
     
-    def bootstrap(self) -> None:
+    def bootstrap(self) -> dict[str, any]:
         self.ctx = build_context()
+        return self.ctx
     
     @abstractmethod
     def metadata(self) -> RegistryData:
@@ -53,19 +54,19 @@ class Command(ABC):
     @abstractmethod
     def grammar(self) -> GrammarRegistry:
         ...
-        
+    
     @abstractmethod
     def get_child(self, name: str) -> Command:
         ...
-        
+    
     @abstractmethod
     def child_metadata(self) -> list[GrammarRegistry]:
         ...
-        
+    
     @abstractmethod
     def run(self, result: ParseResult) -> int:
         ...
-        
+    
     def _get_child_metadata(self, path: Path | str) -> tuple[CommandRegistry, list[RegistryError]]:
         registry: CommandRegistry = {}
         errors: list[RegistryError] = []
@@ -102,6 +103,7 @@ class Command(ABC):
                 registry[metadata.name] = metadata
                 
             except Exception as error:
+                raise errors
                 errors.append(RegistryError(item.name, metadata_file, error))
         
         return registry, errors
@@ -125,7 +127,6 @@ def execute(parser_stream: ParserStream, command: Command, ctx: dict[str, Any]) 
     Resolve the command hierarchy, validate arguments, and dispatch once.
     """
     while True:
-        print(command.grammar())
         result = parser_stream.parse(
             command.grammar()
         )
@@ -165,6 +166,7 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     for token in items:
         if token["type"] is TokenType.flag and token["name"] in _CORE_ROOT_FLAGS:
             result[token["name"]] = True
+    
     return result
 
 

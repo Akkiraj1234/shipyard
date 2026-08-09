@@ -1,11 +1,14 @@
 from shipyard.types import RegistryData
-
+from pathlib import Path
 
 METADATA = RegistryData(
     name = "init",
     description = "Initialize a new Shipyard project.",
     help = "Create a new Shipyard project.",
     hidden = False,
-    entrypoint = "main:command",
-    has_child = False
+    
+    dir_path = Path(__file__).parent,
+    child_path = None,
+    
+    entry_class = "main:InitCommand"
 )

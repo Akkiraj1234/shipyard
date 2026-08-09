@@ -60,20 +60,25 @@ class RegistryData:
     name: str
     description: str
     help: str
-
     hidden: bool = False
-    has_child: bool = False
-    # Whether this command can delegate input to a child command.
-    # This does not mean the command must have a child.
 
-    dir_path: Path | None = None
+    dir_path: Path | str | None = None
     # Directory containing this command's metadata and entrypoint.
-    child_path: Path | None = None
-    # Directory containing this command's child commands, if any.
 
-    entry_class: str = ...
-    # Import path of the command's entry class, relative to the project root.
-    # Example: "doctor.main:DoctorCommand"
+    child_path: Path | str | None = None
+    # Directory containing this command's child commands.
+    # If None, this command does not support child commands.
+
+    entry_class: str | None = None
+    # Import path of the command entry, relative to ``dir_path``.
+    # Example: "main:command" or "doctor.main:DoctorCommand"
+    
+    @property
+    def has_child(self) -> bool:
+        """
+        Whether this command supports child-command delegation.
+        """
+        return self.child_path is not None
 
 
 TokenList: TypeAlias = list[Token]

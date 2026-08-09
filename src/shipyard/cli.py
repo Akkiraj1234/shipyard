@@ -3,16 +3,10 @@ import sys
 
 from .parser import create_parser
 from .core import build_core_flag, cleanup, execute
-from .shipyard import Shipyard_Command
+from .shipyard import ShipyardCommand
 from .error import shipyard_error_print
 
 
-def test_command(command):
-    print("command_metdata\n", command.metadata(), "\n")
-    print("command_grammer\n", command.grammar(), "\n")
-    print("command_get_child\n", command.get_child("init"), "\n")
-    print("command_child_metadata\n", command.child_metadata(), "\n")
-    print("command_run", command.run(), "\n")
 
 def main() -> int:
     """
@@ -24,14 +18,12 @@ def main() -> int:
     
     stream = create_parser(sys.argv)
     ctx = build_core_flag(stream)
-    command = Shipyard_Command(ctx)
-    test_command(command)
-    return
+    command = ShipyardCommand(ctx)
+    
     try: 
-        return execute(stream, command, ctx)
+        return execute(stream, command)
     
     except Exception as error:
-        raise error
         return shipyard_error_print(error, ctx)
     
     finally:

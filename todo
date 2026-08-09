@@ -1,19 +1,23 @@
 [SHP-000] Foundation
 
-- [ ] Implement the CLI parser. Every command passes through the parser, which resolves the command, parses arguments and flags, and dispatches execution to the command's `run()` method. The parser is not responsible for error handling.
+> Status: core scaffolding, registry discovery, configuration loading, and focused unit tests are in place. Complete the remaining items below before marking SHP-000 complete and moving on to SHP-001.
+
+- [x] Implement the CLI parser. Every command passes through the parser, which resolves the command, parses arguments and flags, and dispatches execution to the command's `run()` method. The parser is not responsible for error handling.
 - [x] Create the application bootstrap (`__init__.py`, `__main__.py`, and `cli.py`) together with the root-level exception handler.
-- [ ] Create the core modules (`error.py`, `utils.py`, and other shared infrastructure).
-- [ ] Implement the command base class/interface. Every command should expose a consistent API (for example, `run()`) and provide metadata such as its name, aliases, and help information.
-- [ ] Implement the command registry. Every command is registered here and discovered by the CLI.
+- [x] Create the core modules (`error.py`, `utils.py`, and other shared infrastructure).
+- [x] Implement the command base class/interface and command metadata contract.
+- [x] Implement the command registry. Every command is registered here and discovered by the CLI.
+- [ ] Add command aliases and complete command-specific help metadata/behavior.
 - [ ] Implement the project path resolver. It should locate the project root, resolve managed file paths, and discover the `.shipyard` directory regardless of the current working directory.
 - [ ] Define standard exit codes for the CLI to provide consistent success and error responses.
-- [ ] Implement the `version` and `help` commands. Generate command help from command docstrings and provide command suggestions for unknown commands.
+- [ ] Implement the `version` and `help` commands. Generate command help from command metadata/docstrings and provide command suggestions for unknown commands.
 - [ ] Implement the output printer as the single interface for terminal output, including future support for colors and formatting.
-- [ ] Implement file utilities, including atomic writes, safe reads, stream reading, directory helpers, and file metadata (modification time and size).
+- [ ] Complete file utilities: safe reads, directory helpers, and file metadata (modification time and size). Atomic writes, safe opening, streams, and module loading are complete.
 - [ ] Implement Markdown utilities for reading, writing, parsing, and editing Shipyard-managed Markdown documents.
-- [ ] Implement configuration loading and `.shipyard` project management.
+- [x] Implement configuration loading, default merging, saving, and upward project-config discovery.
+- [ ] Implement `.shipyard` project management and managed-path resolution.
 - [ ] Implement feature ID generation and version management.
-- [ ] Write unit tests for the foundation.
+- [x] Write unit tests for the foundation.
 
 ------------------------------------------------------------
 
@@ -29,4 +33,3 @@
 - [ ] Display a project summary together with suggested next commands.
 - [ ] Validate the initialized project and report any remaining issues.
 - [ ] Write unit tests for project initialization.
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
-
 from pathlib import Path
 
+from shipyard.core import Command
 from shipyard.config import CONFIG_FILE_NAME, DEFAULT_TOML
 from shipyard.types import ParseResult
 
@@ -46,3 +46,26 @@ def command(result: ParseResult) -> int:
     if existing:
         print("\n".join(f"  kept    {path}" for path in existing))
     return 0
+
+
+class InitCommand(Command):
+
+    def __init__(self, root_ctx, name = None):
+        super().__init__(root_ctx, name)
+        
+    @property
+    def metadata(self):
+        return None
+    
+    def grammar(self): 
+        return None
+    
+    def get_child(self, name: str):
+        return None
+    
+    def child_metadata(self):
+        return None
+    
+    def run(self, result: ParseResult) -> int:
+        print("i am runninge")
+        return self.bootstrap()

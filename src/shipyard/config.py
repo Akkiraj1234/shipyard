@@ -79,7 +79,9 @@ def load_config(start: Path | None = None) -> tuple[Path, dict[str, Any]]:
                     config = tomllib.load(file)
                     
             except tomllib.TOMLDecodeError as exc:
-                raise ShipyardFileError(str(exc)) from exc
+                raise ShipyardFileError(
+                    f"could not parse configuration file '{config_path}': {exc}"
+                ) from exc
             
             config = merge_dicts(DEFAULT_CONFIG, config)
             

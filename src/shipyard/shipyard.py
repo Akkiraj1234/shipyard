@@ -1,12 +1,15 @@
 from __future__ import annotations
+
+from collections.abc import Callable
 from typing import Any
 from pathlib import Path
 
 from .__version__ import __version__
-from .types import RegistryData, CommandRegistry, GrammarRegistry
-from .core import Command
-from .utils import error_to_warning
-from pathlib import Path
+from .core import Command, command_help, load_command
+from .error import CommandLoadError
+from .types import RegistryData, CommandRegistry, GrammarRegistry, ParseResult
+from .utils import error_to_warning, import_file
+
 
 
 SHIPYARD_METADATA = RegistryData(
@@ -17,55 +20,47 @@ SHIPYARD_METADATA = RegistryData(
     ),
     help = "Here are all the Shipyard commands.",
     hidden = False,
-    has_child = True,
-    child_path = Path(__file__).resolve().parent,
+    child_path = Path(__file__).parent / "commands",
+    entry_class = "shipyard:ShipyardCommand",
 )
 
 
-class Shipyard_Command(Command):
-    def __init__(self, root_ctx, name = None):
-        name = "shipyard"
-        super().__init__(root_ctx, name)
-        self.__child_metadata_data = None
+class ShipyardCommand(Command):
+    
+    CORE_FLAGS = {"version", "force"}
+    
+    def __init__(self, root_ctx: dict[str, bool]) -> None:
+        super().__init__(root_ctx, SHIPYARD_METADATA.name)
+        self._child_metadata: CommandRegistry | None = None
         
-    def metadata(self) -> dict[str, Any]:
+    @property
+    def metadata(self) -> RegistryData:
         return SHIPYARD_METADATA
     
-    def grammar(self) -> GrammarRegistry:
-        words = self._build_word_by_command_registry(
-            self.child_metadata()
-        )
-        
-        optiones = set()
-        flags = {
-            "version",
-            "force"
-        }
-        
+    def grammar(self) -> GrammarRegistry: 
         return GrammarRegistry(
-            has_child = True,
-            words = words,
-            options = optiones,
-            flags = flags
+            has_child = self.metadata.has_child,
+            words = set(self.child_metadata()),
+            flags = ShipyardCommand.CORE_FLAGS
         )
     
-    def get_child(self, name: str) -> RegistryData | None:
-        data = self.child_metadata()
-        return data.get(name, None)
+    def get_child(self, name: str) -> Command:
+        metadata = self.child_metadata().get(name)
+        
+        if metadata is None:
+            raise CommandLoadError(f"unknown command '{name}'")
+        return load_command(self.root_ctx, metadata)
     
     def child_metadata(self) -> CommandRegistry:
-        if self.__child_metadata_data is not None:
-            return self.__child_metadata_data
+        if self._child_metadata is None:
+            self._child_metadata, errors = \
+                self._get_child_metadata(
+                    self.metadata.child_path
+                )
+            error_to_warning(errors)
         
-        metadata = self.metadata()
-        child_path = metadata.child_path
-        
-        self.__child_metadata_data, errors = \
-            self._get_child_metadata(child_path)
-            
-        error_to_warning(errors)
-        return self.__child_metadata_data
+        return self._child_metadata
     
-    def run(self):
+    def run(self, result: ParseResult) -> int:
         print("i am runninge")
         return self.bootstrap()

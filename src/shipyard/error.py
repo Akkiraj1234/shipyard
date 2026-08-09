@@ -1,101 +1,18 @@
-# from __future__ import annotations
+"""User-facing errors and rendering for the Shipyard command line."""
 
-# from dataclasses import dataclass
-# from pathlib import Path
-# from typing import TYPE_CHECKING, Any
-
-# if TYPE_CHECKING:
-#     from .parser import ParserStream
-#     from .utils import best_matches
-
-
-# # colors and stuff
-# RESET = "\033[0m"
-# UNDERLINE = "\033[4m"
-
-
-
-# class ShipyardError(Exception):
-#     """
-#     Base class for errors that can be shown cleanly by the CLI.
-#     """
-#     def __init__(self, *args):
-#         super().__init__(*args)
-
-
-# class ShipyardFileError(ShipyardError):
-#     def __init__(self, *args):
-#         super().__init__(*args)
-        
-
-# class ShipyardParserError(ShipyardError):
-#     def __init__(self, strem: ParserStream, message: str, *args):
-#         self.strem: ParserStream = strem
-#         self.message: str = message
-#         super().__init__(*args)
-        
-#     def __str__(self):
-#         print(f"ShipyardParserError: {self.message}\n > ")
-#         first = []
-#         secoend = []
-        
-#         for idx, item in enumerate(self.strem.items):
-#             if idx == self.strem.idx:
-#                 first.append(f"{UNDERLINE}{item}{RESET} ")
-#                 "^".center(len(item)+1)
-#                 secoend.append("^".center(len(item)+1))
-#                 continue
-            
-#             first.append(f"item ")
-#             secoend.append(f"{(len(item)+1)*' '}")
-#         return f"{' '.join(first)}\n{' '.join(first)}" 
-        
-        
-            
-
-
-# @dataclass(slots=True)
-# class RegistryError(ShipyardError):
-#     """A command metadata file could not be loaded."""
-
-#     command: str
-#     path: Path
-#     cause: Exception
-
-#     def __str__(self) -> str:
-#         return f"could not load command '{self.command}' from {self.path}: {self.cause}"
-
-
-# class UsageError(ShipyardError):
-#     """The supplied command line does not match a command grammar."""
-    
-    
-# class ShipYardConfigNotFoundError(ShipyardError):
-#     """pass"""
-    
-
-
-# def shipyard_error_print(error: ShipyardError, ctx: dict[str, Any]) -> int:
-#     if not isinstance(error, ShipyardError):
-#         print(error)
-#         return 2
-
-#     if ctx.get("dev", False):
-#         print(error)  # Full error with logs, traceback, context, etc.
-#     else:
-#         print(error.message)  # Or error.summary / error.pretty_message
-
-#     return 2
-    
-#     # if isinstance(error, ParserStream)
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from difflib import get_close_matches
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+import traceback
+from typing import TYPE_CHECKING, Any, Iterable
+
+from .types import TokenType
 
 if TYPE_CHECKING:
     from .parser import ParserStream
+
 
 RED = "\033[31m"
 YELLOW = "\033[33m"
@@ -104,20 +21,52 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 
+def _suggest(value: str, choices: Iterable[str]) -> str | None:
+    """Return the closest known spelling of ``value``, when one exists."""
+    matches = get_close_matches(value, sorted(set(choices)), n=1, cutoff=0.6)
+    return matches[0] if matches else None
+
+
 class ShipyardError(Exception):
-    """Base class for all user-facing Shipyard errors."""
+    """Base class for errors Shipyard can explain directly to a user."""
 
     title = "error"
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        details: Iterable[str] = (),
+    ) -> None:
+        self.message = message
+        self.hint = hint
+        self.details = tuple(details)
+        super().__init__(message)
+
     def pretty(self) -> str:
-        return str(self)
+        lines = [f"{RED}{BOLD}{self.title}:{RESET} {self.message}"]
+        if self.details:
+            lines.extend(["", *self.details])
+        if self.hint:
+            lines.extend(["", f"{CYAN}hint:{RESET} {self.hint}"])
+        return "\n".join(lines)
 
     def debug(self) -> str:
         return repr(self)
 
+    def __str__(self) -> str:
+        return self.pretty()
 
-class ShipyardParserError(ShipyardError):
-    title = "parser"
+
+class UsageError(ShipyardError):
+    """The supplied command line does not match a command grammar."""
+
+    title = "usage error"
+
+
+class ShipyardParserError(UsageError):
+    """A parse error with a pointer to the offending command token."""
 
     def __init__(
         self,
@@ -125,91 +74,118 @@ class ShipyardParserError(ShipyardError):
         message: str,
         *,
         hint: str | None = None,
-    ):
+    ) -> None:
         self.stream = stream
-        self.message = message
-        self.hint = hint
-        super().__init__(message)
+        super().__init__(message, hint=hint)
 
     def _command_line(self) -> str:
-        parts = []
-        pointer = []
-
-        for i, token in enumerate(self.stream.items):
-            text = token["name"]
-
-            parts.append(text)
-
-            if i == self.stream.idx:
-                pointer.append("^" * len(text))
+        parts: list[str] = []
+        pointer: list[str] = []
+        for index, token in enumerate(self.stream.items):
+            name = token["name"]
+            value = token["value"]
+            if token["type"] is TokenType.option:
+                text = f"--{name}={value}"
+            elif token["type"] is TokenType.flag:
+                text = f"--{name}"
             else:
-                pointer.append(" " * len(text))
-
-        return (
-            "$ shipyard " + " ".join(parts)
-            + "\n"
-            + "            " + " ".join(pointer)
-        )
+                text = str(name)
+            parts.append(text)
+            pointer.append("^" * len(text) if index == self.stream.idx else " " * len(text))
+        return "$ shipyard " + " ".join(parts) + "\n" + "            " + " ".join(pointer)
 
     def pretty(self) -> str:
-        out = [
-            f"{RED}{BOLD}error:{RESET} {self.message}",
-            "",
-            self._command_line(),
-        ]
+        self.details = (self._command_line(),)
+        return super().pretty()
 
-        if self.hint:
-            out.extend(
-                [
-                    "",
-                    f"{CYAN}hint:{RESET} {self.hint}",
-                ]
-            )
 
-        return "\n".join(out)
+class UnknownCommandError(ShipyardParserError):
+    """A requested subcommand is not registered at the current level."""
 
-    def __str__(self):
-        return self.pretty()
+    def __init__(self, stream: ParserStream, command: str, choices: Iterable[str]) -> None:
+        suggestion = _suggest(command, choices)
+        hint = f"Did you mean 'shipyard {suggestion}'?" if suggestion else "Run 'shipyard --help' to see available commands."
+        super().__init__(stream, f"unknown command '{command}'", hint=hint)
+
+
+class InvalidInputError(ShipyardParserError):
+    """An argument, flag, or option is invalid in the current command scope."""
+
+    def __init__(
+        self,
+        stream: ParserStream,
+        kind: str,
+        value: str,
+        choices: Iterable[str],
+    ) -> None:
+        prefix = "--" if kind in {"flag", "option"} else ""
+        suggestion = _suggest(value, choices)
+        hint = f"Did you mean '{prefix}{suggestion}'?" if suggestion else None
+        super().__init__(stream, f"unknown {kind} '{prefix}{value}'", hint=hint)
+
+
+class CommandLoadError(ShipyardError):
+    """A discovered command cannot be instantiated from its metadata."""
+
+    title = "command error"
 
 
 @dataclass(slots=True)
 class RegistryError(ShipyardError):
+    """A command metadata file could not be loaded during discovery."""
+
     command: str
     path: Path
     cause: Exception
+    title: str = field(init=False, default="registry error")
 
-    def pretty(self):
+    def __post_init__(self) -> None:
+        Exception.__init__(self, self.command)
+
+    def pretty(self) -> str:
+        cause = self.cause.message if isinstance(self.cause, ShipyardError) else str(self.cause)
         return (
-            f"{RED}{BOLD}error:{RESET} "
-            f"could not load command '{self.command}'\n"
-            f"\n"
+            f"{YELLOW}{BOLD}warning:{RESET} could not load command '{self.command}'\n"
             f"location: {self.path}\n"
-            f"reason:   {self.cause}"
+            f"reason: {cause}"
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.pretty()
 
 
 class ShipyardFileError(ShipyardError):
-    pass
+    """A repository file could not be read, written, or parsed."""
 
-
-class UsageError(ShipyardError):
-    pass
+    title = "file error"
 
 
 class ShipYardConfigNotFoundError(ShipyardError):
-    pass
+    """No ``shipyard.toml`` was found while searching from a directory."""
+
+    title = "configuration error"
+
+    def __init__(self, searched_from: Path) -> None:
+        super().__init__(
+            "could not find shipyard.toml",
+            details=(f"searched from: {searched_from}",),
+            hint="Run 'shipyard init' to create a Shipyard project.",
+        )
 
 
 def shipyard_error_print(error: Exception, ctx: dict[str, Any]) -> int:
-    if ctx.get("dev"):
-        raise error
-
+    """Render every exception at the CLI boundary and return a failure code."""
     if isinstance(error, ShipyardError):
         print(error.pretty())
     else:
-        print(f"{RED}{BOLD}error:{RESET} {error}")
+        print(f"{RED}{BOLD}fatal:{RESET} Shipyard encountered an unexpected error")
+        print(f"reason: {type(error).__name__}: {error}")
+
+    if ctx.get("dev"):
+        print()
+        error_type = f"{type(error).__module__}.{type(error).__qualname__}"
+        print(f"{CYAN}{BOLD}debug:{RESET} {error_type}")
+        print("traceback:")
+        print("".join(traceback.format_tb(error.__traceback__)).rstrip())
 
     return 2

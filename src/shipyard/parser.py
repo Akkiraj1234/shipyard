@@ -30,7 +30,7 @@ from .types import (
     TokenType 
 )
 from .utils import ListStream
-from .error import ShipyardParserError
+from .error import InvalidInputError, ShipyardParserError, UnknownCommandError
 
 if TYPE_CHECKING:
     from .core import Command
@@ -152,13 +152,15 @@ class ParserStream(ListStream):
         
         if (
             self.grammar_registry.has_child and
-            self.current["name"] == TokenType.word and 
+            self.current["type"] == TokenType.word and
             bool(self.grammar_registry.words)
         ):
             child = self.current["name"]
             
             if child not in self.grammar_registry.words:
-                raise ShipyardParserError(self, f"invalid subcommand {child}")
+                raise UnknownCommandError(
+                    self, child, self.grammar_registry.words
+                )
             
             self.move()
             return ParseResult(child = child)
@@ -176,18 +178,27 @@ class ParserStream(ListStream):
             
             if token["type"] == TokenType.word:
                 if token["name"] not in self.grammar_registry.words:
-                    raise ValueError(f"{token['name']} is not a valid argument")
+                    raise InvalidInputError(
+                        self, "argument", token["name"],
+                        self.grammar_registry.words,
+                    )
 
                 word.append(token["name"])
 
             elif token["type"] == TokenType.flag:
                 if token["name"] not in self.grammar_registry.flags:
-                    raise ValueError(f"{token['name']} is not a valid flag")
+                    raise InvalidInputError(
+                        self, "flag", token["name"],
+                        self.grammar_registry.flags,
+                    )
                 flag.add(token["name"])
 
             elif token["name"] is not None and token["value"] is not None:
                 if token["name"] not in self.grammar_registry.options:
-                    raise ValueError(f"{token['name']} is not a valid option")
+                    raise InvalidInputError(
+                        self, "option", token["name"],
+                        self.grammar_registry.options,
+                    )
                 
                 option[token["name"]] = token["value"]
                 

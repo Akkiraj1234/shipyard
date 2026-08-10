@@ -1,6 +1,6 @@
 [project]
 name = "My Project"
-version = "0.1.0"
+version = "0.0.1"
 description = "A simple project built with Shipyard."
 
 [github]

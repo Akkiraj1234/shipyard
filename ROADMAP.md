@@ -5,15 +5,12 @@
 >
 > Implementation details are tracked separately by Shipyard's task system.
 
-
-# Additional Changes
+## Additional Changes
 
 Changes made during development that were **not originally planned**.
 These entries will be merged into the next generated release before being cleared.
 
-
-
-## 🚀 v1.0.0 — Foundation
+### 🚀 v1.0.0 — Foundation
 
 > **Target:** First public release \
 > **Status:** 🚧 In Development
@@ -30,8 +27,7 @@ These entries will be merged into the next generated release before being cleare
 * [ ] SHP-009 added: Release preparation.
 * [ ] SHP-010 added: Shipyard project directory (`.shipyard`).
 
-
-## 🚀 v1.1.0
+### 🚀 v1.1.0
 
 > **Status:** Planned
 
@@ -39,8 +35,7 @@ These entries will be merged into the next generated release before being cleare
 * [ ] SHP-012 added: Configurable metadata locations.
 * [ ] SHP-013 added: Project inspection and health checks.
 
-
-## 🚀 v1.2.0
+### 🚀 v1.2.0
 
 > **Status:** Planned
 
@@ -48,15 +43,13 @@ These entries will be merged into the next generated release before being cleare
 * [ ] SHP-015 added: CommonMark placeholder expansion.
 * [ ] SHP-016 added: Improved metadata management.
 
-
-## 🚀 v1.2.0
+### 🚀 v1.2.1
 
 > **Status:** Planned
 
 * [ ] SHP-017 fixed: fix tokenize to support all not implemented test case in test_tokenizer.py
 
-
-## 🌱 Future
+### 🌱 Future
 
 The following ideas are intentionally **not scheduled**.
 They remain in the `ideas/` directory until they become roadmap features.

@@ -1,35 +1,325 @@
-[SHP-000] Foundation
+# Shipyard TODO
 
-> Status: core scaffolding, registry discovery, configuration loading, and focused unit tests are in place. Complete the remaining items below before marking SHP-000 complete and moving on to SHP-001.
+## [SHP-000] Foundation
 
-- [x] Implement the CLI parser. Every command passes through the parser, which resolves the command, parses arguments and flags, and dispatches execution to the command's `run()` method. The parser is not responsible for error handling.
-- [x] Create the application bootstrap (`__init__.py`, `__main__.py`, and `cli.py`) together with the root-level exception handler.
-- [x] Create the core modules (`error.py`, `utils.py`, and other shared infrastructure).
-- [x] Implement the command base class/interface and command metadata contract.
-- [x] Implement the command registry. Every command is registered here and discovered by the CLI.
-- [ ] Add command aliases and complete command-specific help metadata/behavior.
-- [ ] Implement the project path resolver. It should locate the project root, resolve managed file paths, and discover the `.shipyard` directory regardless of the current working directory.
-- [ ] Define standard exit codes for the CLI to provide consistent success and error responses.
-- [ ] Implement the `version` and `help` commands. Generate command help from command metadata/docstrings and provide command suggestions for unknown commands.
-- [ ] Implement the output printer as the single interface for terminal output, including future support for colors and formatting.
-- [ ] Complete file utilities: safe reads, directory helpers, and file metadata (modification time and size). Atomic writes, safe opening, streams, and module loading are complete.
-- [ ] Implement Markdown utilities for reading, writing, parsing, and editing Shipyard-managed Markdown documents.
-- [x] Implement configuration loading, default merging, saving, and upward project-config discovery.
-- [ ] Implement `.shipyard` project management and managed-path resolution.
-- [ ] Implement feature ID generation and version management.
-- [x] Write unit tests for the foundation.
+> **Goal:** Establish a stable, usable CLI foundation: parsing, command discovery, registry loading, configuration, error handling, and the infrastructure required by later commands.
+>
+> **Release target:** `SHP-000` is complete when Shipyard can reliably start, parse input, resolve and load commands, handle global flags, execute commands, report errors, and return consistent exit statuses.
 
-------------------------------------------------------------
+* [x] Implement the CLI parser.
 
-[SHP-001] Initialize a Shipyard Project
+  * Tokenize command-line input.
+  * Normalize words, options, and flags.
+  * Parse command arguments through `GrammarRegistry`.
+  * Produce `ParseResult`.
+  * Dispatch parsed input to the command's `run()` method.
 
-- [ ] Implement the `shipyard init` command.
-- [ ] Detect missing project files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, `ideas/`, `.shipyard/`) and create them when necessary.
-- [ ] Validate the existing project structure and repair missing or invalid Shipyard files where possible.
-- [ ] Create the `.shipyard` directory and initialize the project registry.
-- [ ] Register managed project files within `.shipyard`.
-- [ ] Update `.gitignore` by appending recommended entries (optionally allowing the user to ignore the `ideas/` directory).
-- [ ] Detect Git repositories and provide repository-specific recommendations after initialization.
-- [ ] Display a project summary together with suggested next commands.
-- [ ] Validate the initialized project and report any remaining issues.
-- [ ] Write unit tests for project initialization.
+* [x] Create the application bootstrap.
+
+  * `__init__.py`
+  * `__main__.py`
+  * `cli.py`
+  * Root-level exception boundary.
+
+* [x] Create the core infrastructure.
+
+  * `core.py`
+  * `error.py`
+  * `utils.py`
+  * Shared types and registry structures.
+
+* [x] Implement the command base class and command contract.
+
+  * Command lifecycle.
+  * Metadata contract.
+  * Grammar contract.
+  * Child-command contract.
+  * Execution contract.
+
+* [x] Implement command metadata.
+
+  * Command name.
+  * Description and help metadata.
+  * Hidden commands.
+  * Command directory.
+  * Child-command directory.
+  * Entry-class definition.
+
+* [x] Implement command registry discovery.
+
+  * Discover command directories.
+  * Load `metadata.py`.
+  * Validate `RegistryData`.
+  * Detect duplicate command names.
+  * Resolve command paths.
+  * Validate child directories.
+  * Resolve command entry classes.
+  * Collect invalid-command errors without stopping discovery.
+
+* [x] Implement lazy command loading.
+
+  * Discover metadata without loading command implementations.
+  * Load the command implementation only when selected.
+
+* [x] Implement configuration handling.
+
+  * Load `shipyard.toml`.
+  * Merge user configuration with defaults.
+  * Search upward for project configuration.
+  * Create default configuration.
+  * Save configuration atomically.
+
+* [x] Implement shared file utilities.
+
+  * Atomic file writes.
+  * Safe file opening.
+  * Generic list streams.
+  * Python module/file loading.
+  * Recursive dictionary merging.
+
+* [x] Implement the CLI error hierarchy.
+
+  * Base `ShipyardError`.
+  * Usage errors.
+  * Parser errors.
+  * Unknown-command errors.
+  * Invalid-input errors.
+  * Command loading errors.
+  * Registry errors.
+  * File/configuration errors.
+
+* [x] Implement user-facing error rendering.
+
+  * Human-readable errors.
+  * Hints.
+  * Command suggestions.
+  * Development traceback output.
+
+* [x] Write focused foundation unit tests.
+
+  * Test behavior at the level where it is owned.
+  * Avoid duplicating inherited behavior across child commands.
+
+* [/] Finalize command child-routing semantics.
+
+  * Matching child → delegate to child.
+  * No matching child → current command handles the remaining input.
+  * Child commands should not duplicate root-level parsing responsibilities.
+
+* [/] Finalize global/core flag handling.
+
+  * Establish one authoritative definition for global flags.
+  * Support `--version`.
+  * Support `--help`.
+  * Support `--dev`.
+  * Support `--no-color`.
+  * Support `--only-json`.
+  * Support the planned developer traceback flag.
+  * Handle global flags at the appropriate command layer.
+
+* [/] Finalize command execution and exit-status handling.
+
+  * Commands return integer exit statuses.
+  * Establish the final execution boundary.
+  * Propagate explicit command return codes.
+  * Convert handled exceptions into appropriate process exit statuses.
+
+* [ ] Define standard CLI exit-code constants.
+
+  * Success.
+  * Generic error.
+  * Usage/input errors.
+  * Configuration errors.
+  * Internal errors.
+  * OS/I/O errors.
+  * Permission errors.
+  * Command-not-found errors.
+  * Interrupt/signal-related statuses.
+
+* [ ] Implement exit-code mapping for Shipyard errors.
+
+* [ ] Finalize `--version`.
+
+  * Print the Shipyard version.
+  * Do not require project configuration when only version information is requested.
+
+* [/] Design and implement the help system.
+
+  * Generate help from command metadata and docstrings.
+  * Support help for the current command scope.
+  * Support child-command discovery.
+  * Provide useful suggestions for unknown commands.
+
+* [/] Implement developer traceback controls.
+
+  * Add the planned `--dev-traceback` flag.
+  * Keep normal user-facing errors concise.
+  * Show detailed traceback information only when explicitly requested.
+
+* [ ] Implement the output/printer interface.
+
+  * Centralize terminal output.
+  * Support normal output.
+  * Support warnings.
+  * Support errors.
+  * Prepare for colors and formatting.
+  * Avoid direct terminal output from command implementations.
+
+* [/] Finalize project-path discovery required by the foundation.
+
+  * Resolve the current project root.
+  * Resolve paths relative to the project root.
+  * Establish the path model required by later project commands.
+
+* [ ] Add command aliases.
+
+  * Define alias metadata.
+  * Resolve aliases during command lookup.
+  * Detect alias conflicts.
+
+* [ ] Finalize command-specific metadata/help behavior.
+
+* [ ] Complete remaining generic file utilities required by the foundation.
+
+  * Directory helpers.
+  * File metadata.
+  * Modification time.
+  * File size.
+  * Safe read helpers.
+
+* [ ] Expand foundation tests after the execution model is finalized.
+
+  * Global flags.
+  * Child routing.
+  * Command loading.
+  * Exit codes.
+  * Help/version behavior.
+  * Error rendering.
+  * Developer traceback behavior.
+
+* [-] Implement feature ID generation and version management as part of SHP-000.
+
+  * Moved to later project/release management work.
+
+* [-] Implement Markdown utilities as part of SHP-000.
+
+  * Moved to SHP-001/project-level functionality.
+
+* [-] Implement `.shipyard` project management as part of SHP-000.
+
+  * Moved to SHP-001.
+
+---
+
+## [SHP-001] Initialize a Shipyard Project
+
+> **Goal:** Turn an existing directory into a Shipyard-managed project and establish the project's `.shipyard` structure and managed files.
+
+* [ ] Implement the `shipyard init` command.
+
+* [ ] Implement project structure detection.
+
+  * Detect `README.md`.
+  * Detect `ROADMAP.md`.
+  * Detect `CHANGELOG.md`.
+  * Detect `ideas/`.
+  * Detect `.shipyard/`.
+
+* [ ] Create missing project files and directories.
+
+  * `README.md`
+  * `ROADMAP.md`
+  * `CHANGELOG.md`
+  * `ideas/`
+  * `.shipyard/`
+
+* [ ] Validate the existing project structure.
+
+* [ ] Repair missing or invalid Shipyard-managed files where possible.
+
+* [ ] Initialize the `.shipyard` directory.
+
+* [ ] Create and initialize the project registry inside `.shipyard`.
+
+* [ ] Register managed project files within `.shipyard`.
+
+* [ ] Implement managed-path resolution for project files.
+
+* [ ] Implement the Markdown utilities required by project initialization.
+
+  * Read Markdown.
+  * Write Markdown.
+  * Parse Markdown.
+  * Edit Markdown sections.
+
+* [ ] Use an existing Markdown/CommonMark library for parsing rather than implementing a complete Markdown parser.
+
+* [ ] Build a thin Shipyard Markdown layer for locating and safely modifying Shipyard-managed sections.
+
+* [ ] Update `.gitignore`.
+
+  * Append recommended Shipyard entries.
+  * Optionally allow the user to ignore the `ideas/` directory.
+
+* [ ] Detect Git repositories.
+
+* [ ] Provide Git/repository-specific recommendations after initialization.
+
+* [ ] Display an initialization summary.
+
+  * Files created.
+  * Files already present.
+  * Files registered.
+  * Recommendations.
+  * Suggested next commands.
+
+* [ ] Validate the initialized project.
+
+* [ ] Report remaining initialization issues.
+
+* [ ] Write unit tests for `shipyard init`.
+
+  * Fresh directory.
+  * Existing project.
+  * Partially initialized project.
+  * Missing files.
+  * Existing conflicting files.
+  * Existing `.shipyard`.
+  * Git repository detection.
+  * Re-running `shipyard init`.
+
+---
+
+## [SHP-002+] Future Work
+
+* [ ] SHP-002 — Generate and manage `ROADMAP.md`.
+
+* [ ] SHP-003 — Generate project `CHANGELOG.md`.
+
+* [ ] SHP-004 — Manage project ideas.
+
+* [ ] SHP-005 — Working task management.
+
+* [ ] SHP-006 — Current feature tracking.
+
+* [ ] SHP-007 — Project metadata registry.
+
+* [ ] SHP-008 — Metadata synchronization.
+
+* [ ] SHP-009 — Release preparation.
+
+* [ ] SHP-010 — Shipyard project directory (`.shipyard`).
+
+* [ ] SHP-011 — Detect supported development tools.
+
+* [ ] SHP-012 — Configurable metadata locations.
+
+* [ ] SHP-013 — Project inspection and health checks.
+
+* [ ] SHP-014 — Documentation synchronization.
+
+* [ ] SHP-015 — CommonMark placeholder expansion.
+
+* [ ] SHP-016 — Improved metadata management.
+
+* [ ] SHP-017 — Fix tokenizer support for all remaining tokenizer test cases.

@@ -55,6 +55,8 @@ class ParseResult:
 class RegistryData:
     """
     Metadata stored for a command in the registry.
+    its follow ADR-0001
+    please check docs/architecture/decisions/ADR-0001 - Command Discovery.md
     """
 
     name: str

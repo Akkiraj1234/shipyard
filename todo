@@ -102,8 +102,8 @@
 
 * [/] Finalize command child-routing semantics.
 
-  * Matching child → delegate to child.
-  * No matching child → current command handles the remaining input.
+  * changes types to have has_child and make it mandorty to have
+  * make everyone resepct the new ADR-0001
   * Child commands should not duplicate root-level parsing responsibilities.
 
 * [/] Finalize global/core flag handling.

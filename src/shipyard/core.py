@@ -138,7 +138,8 @@ class Command(ABC):
         ...
     
     def _get_child_metadata(self, path: Path | str) -> tuple[CommandRegistry, list[RegistryError]]:
-        """Discover and load child commands from a directory.
+        """
+        Discover and load child commands from a directory.
 
         Searches the given directory for command directories containing
         ``metadata.py`` files. Invalid command metadata is collected as

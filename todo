@@ -124,7 +124,7 @@
   * Propagate explicit command return codes.
   * Convert handled exceptions into appropriate process exit statuses.
 
-* [ ] Define standard CLI exit-code constants.
+* [/] Define standard CLI exit-code constants.
 
   * Success.
   * Generic error.
@@ -136,9 +136,9 @@
   * Command-not-found errors.
   * Interrupt/signal-related statuses.
 
-* [ ] Implement exit-code mapping for Shipyard errors.
+* [/] Implement exit-code mapping for Shipyard errors.
 
-* [ ] Finalize `--version`.
+* [/] Finalize `--version`.
 
   * Print the Shipyard version.
   * Do not require project configuration when only version information is requested.

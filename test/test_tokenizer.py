@@ -1,6 +1,6 @@
 import pytest
 
-from shipyard.error import InvalidInputError, UnknownCommandError
+from shipyard.error import InvalidInputError, ShipyardParserError, UnknownCommandError
 from shipyard.parser import create_parser, strip_prefix, tokenize
 from shipyard.types import GrammarRegistry, TokenType
 
@@ -50,3 +50,13 @@ def test_parser_rejects_an_unknown_option():
 
     with pytest.raises(InvalidInputError, match="unknown flag '--forse'"):
         stream.parse(GrammarRegistry(flags={"force"}))
+
+
+def test_parser_explains_when_no_grammar_is_provided():
+    stream = create_parser(["shipyard", "doctor"])
+
+    with pytest.raises(
+        ShipyardParserError,
+        match="cannot parse command-line input without a grammar registry",
+    ):
+        stream.parse(None)

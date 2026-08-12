@@ -1,29 +1,21 @@
 """
-Shipyard command-line parser.
+Tokenize and validate command-line input for Shipyard.
 
-This module implements the core parsing pipeline for the Shipyard CLI.
-It converts raw command-line arguments into normalized tokens and exposes
-a stream interface for consuming those tokens according to a command
-grammar.
+The parser converts ``argv`` values into normalized word, option, and flag
+tokens, then exposes a cursor-based stream for consuming them against a
+command's :class:`~shipyard.types.GrammarRegistry`. Command discovery and
+execution remain the responsibility of the command layer (see ADR-0001).
 
-its follow ADR-0001
-
-Responsibilities
-----------------
-- Tokenize raw CLI arguments.
-- Normalize options and flags.
-- Provide sequential token traversal.
-- Support grammar-driven command parsing.
-
-This module performs lexical and stream management only. Command
-validation and execution are delegated to the registered grammar.
+``ParserStream.parse()`` raises :class:`~shipyard.error.UnknownCommandError`
+when a child command is not registered, and
+:class:`~shipyard.error.InvalidInputError` when an argument, option, or flag
+is not accepted by the active grammar.
 """
 
 from __future__ import annotations
-
 import sys
-from typing import TYPE_CHECKING
 
+from .utils import ListStream
 from .types import (
     GrammarRegistry, 
     ParseResult, 
@@ -31,18 +23,20 @@ from .types import (
     TokenList, 
     TokenType 
 )
-from .utils import ListStream
-from .error import InvalidInputError, ShipyardParserError, UnknownCommandError
-
+from .error import (
+    InvalidInputError, 
+    ShipyardParserError, 
+    UnknownCommandError
+)
 
 
 
 def strip_prefix(flag: str) -> str:
     """
-    Remove a leading CLI prefix from an option or flag name.
+    Return an option or flag name without its leading hyphen prefix.
 
-    This normalizes tokens like `--force` and `-f` into plain names so the
-    parser can work with consistent values internally.
+    For example, ``--force`` becomes ``force`` and ``-f`` becomes ``f``.
+    Values without a prefix are returned unchanged.
     """
 
     if flag.startswith("--"):
@@ -56,20 +50,12 @@ def strip_prefix(flag: str) -> str:
 
 def classify_token_type(stream: ListStream) -> Token:
     """
-    Convert the current CLI value into a token dictionary.
+    Classify and consume the stream's current command-line value.
 
-    The tokenizer supports these common input shapes:
-        word
-        --option value
-        --option=value
-        --flag
-
-    A positional value becomes a `word` token. A prefixed argument followed by
-    a separate value, or containing `=`, becomes an `option` token. A prefixed
-    argument with no value becomes a `flag` token.
-
-    This function only classifies syntax. It does not validate command names,
-    argument meaning, or command order.
+    Positional values become word tokens. ``--option value`` and
+    ``--option=value`` become option tokens, while a prefixed value without an
+    associated value becomes a flag token. This lexical step does not validate
+    command names or whether a token is accepted by a grammar.
     """
     
     if stream.current.startswith("-"):
@@ -109,10 +95,11 @@ def classify_token_type(stream: ListStream) -> Token:
 
 def tokenize(argv: list[str]) -> TokenList:
     """
-    Tokenize command-line arguments from `sys.argv`.
+    Return normalized tokens for an ``argv``-style argument list.
 
-    The returned list contains normalized token dictionaries grouped into the
-    three supported categories: word, option, and flag.
+    The first value is treated as the executable name and is not tokenized.
+    Remaining values are classified as words, options, or flags. Syntax is
+    normalized here; grammar validation occurs in :meth:`ParserStream.parse`.
     """
     list_steam = ListStream(argv, 1)
     token = []
@@ -130,12 +117,12 @@ def tokenize(argv: list[str]) -> TokenList:
 
 class ParserStream(ListStream):
     """
-    Parse Stream is stream of sys.argv its inherit list stream so u can use its 
-    functcion too
-    parse stream stream over sys.argv arguments
-    
-    raise: 
-        ShipyardParserError: 
+    A cursor over normalized command-line tokens.
+
+    The stream inherits traversal operations from :class:`ListStream` and
+    retains its position between calls to :meth:`parse`. This lets the command
+    executor resolve one child command at a time before validating the input
+    accepted by the resolved command.
     """
     
     def __init__(self, items: TokenList):
@@ -143,17 +130,30 @@ class ParserStream(ListStream):
         self.grammar_registry = None
         
     
-    def parse(self, grammar: GrammarRegistry) -> ParseResult:
+    def parse(self, grammar: GrammarRegistry | None) -> ParseResult:
         """
-        If the current grammar has child commands, search for the next
-        token as a subcommand. If it has no child commands, consume the 
-        remaining input according to the grammar.
-        its follow adr-0001
+        Consume input according to ``grammar`` and return its parse result.
+
+        A grammar with child commands consumes one word token and returns it in
+        :attr:`ParseResult.child`. Otherwise, all remaining tokens are
+        validated and returned as positional arguments, options, and flags.
+
+        Raises:
+            ShipyardParserError: If ``grammar`` is ``None`` instead of a
+                :class:`GrammarRegistry`.
+            UnknownCommandError: If the next child-command token is not
+                registered in ``grammar.words``.
+            InvalidInputError: If a positional argument, option, or flag is
+                not accepted by the grammar.
         """
         self.grammar_registry = grammar
         
         if self.grammar_registry is None:
-            raise ShipyardParserError(self, "Invalid grammar registry for token stream.")
+            raise ShipyardParserError(
+                self,
+                "cannot parse command-line input without a grammar registry",
+                hint="Pass a GrammarRegistry that describes the current command.",
+            )
         
         if self.current is None:
             return ParseResult()
@@ -176,6 +176,17 @@ class ParserStream(ListStream):
         return parse_arg
     
     def _parse_arguments(self) -> ParseResult:
+        """
+        Validate and consume all remaining tokens for the active grammar.
+
+        Returns:
+            ParseResult: A parse result containing accepted positional arguments, 
+            options, and flags.
+
+        Raises:
+            InvalidInputError: If a remaining token is not declared by the
+                active grammar.
+        """
         word: list[str] = []
         flag: set[str] = set()
         option: dict[str, str] = {}
@@ -216,8 +227,14 @@ class ParserStream(ListStream):
 
 def create_parser(argv: list[str] | None = None) -> ParserStream:
     """
-    its take user input from sys.args its tokenize it 
-    and return a parser_stream obj
+    Create a parser stream from an ``argv``-style list.
+
+    Args:
+        argv: The complete argument vector, including the executable name. If
+            omitted, uses :data:`sys.argv`.
+
+    Returns:
+        A stream positioned at the first command-line argument.
     """
     argv = sys.argv if argv is None else argv
     tokens = tokenize(argv)

@@ -1,0 +1,53 @@
+# create_parser
+create the parser and parser object and take input follow ADR-0001
+- [x] make sure child is mandotory
+- [ ] make everyone resepct the new ADR-0001
+    - cli.py
+    - config.py
+    0 core.py
+    - error.py
+    - parser.py
+    - shipyard.py
+    - types.py
+    - utils.py
+    - `__init__.py`
+    - `__main__.py`
+    0 `__version__.py`
+
+# build_core_flag
+build the core flag
+- [ ] remove flags from parser
+- [ ] edit liststream to add remove list of item function
+- [ ] remove it from actual list wihout breaking the list to print info
+
+# ShipyardCommand
+- [ ] handle its domain of commands
+- [ ] write run comamnd
+
+# execute
+- [ ] check if execute follow adr-0001
+
+# shipyard_error_print
+- [ ] better error system and prinintg
+
+## error.py
+- [ ] Commands return integer exit statuses. 
+- [ ] error have interger exit status code
+- [ ] Propagate explicit command return codes.
+- [ ] document Define standard CLI exit-code constants. 
+
+- [ ] check if all raise meningfull error and its handle properly in all place
+
+# cleanup
+
+# other
+- [ ] make help take command as argument to pass help infomation
+- [ ] support version, help, dev, no-color, only-json, dev-traceback
+
+
+* [/] Design and implement the help system.
+
+  * Generate help from command metadata and docstrings.
+  * Support help for the current command scope.
+  * Support child-command discovery.
+  * Provide useful suggestions for unknown commands.

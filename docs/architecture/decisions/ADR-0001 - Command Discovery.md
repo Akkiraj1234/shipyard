@@ -1,31 +1,125 @@
 # ADR-0001: Command Discovery
 
-> **Status**: Accepted
-> **Author**: Akhand Raj
+> **Status**: Accepted\
+> **Author**: Akhand Raj\
 > **Updated**: 10-08-2026
 
 ## Idea
 
-Shipyard uses a hierarchy-based command discovery system instead of `argparse`.
+Shipyard uses a hierarchy-based command discovery system instead of
+`argparse`.
 
-The parser walks through the command hierarchy one child at a time until it finds the command that should run.
+The parser walks through the command hierarchy one child at a time until
+it reaches the command that should handle the remaining input.
+
+Command discovery is based on the current grammar's `has_child` state
+and the type of the next token.
 
 ## Rules
 
-1. If the current token is not a `word`, parse the remaining input as arguments.
-2. If the current token is a `word`, try to match it against the current `GrammarRegistry`.
-3. If a match is found, move to that child command.
-4. If no match is found, raise `UnknownCommandError`.
+The first decision is whether the current grammar has child commands.
 
-## Why `UnknownCommandError`?
+``` text
+has_child?
+   │
+   ├── false ──────────────→ parse current input
+   │
+   └── true
+        │
+        ▼
+   next token?
+        │
+        ├── no token ──────→ empty ParseResult
+        │
+        ├── option/flag ───→ parse current grammar
+        │
+        └── word
+             │
+             ▼
+        child exists?
+          │       │
+         yes      no
+          │        │
+          ▼        ▼
+       move      error
+       child
+```
 
-When `has_child` is `true`, the command expects the next `word` to be a child command.
+1. If `has_child` is `false`, do not perform child discovery. Parse the
+   remaining input using the current grammar.
+2. If `has_child` is `true`, inspect the next token.
+3. If the next token is an `option` or `flag`, do not perform child
+   discovery. Parse it using the current grammar.
+4. If the next token is a `word`, use the current `GrammarRegistry` to
+   find a matching child command.
+5. If the word matches a child, move to that child command and continue
+   discovery using the same `ParserStream`.
+6. If the word does not match a child, raise `UnknownCommandError`.
+7. If there is no current token, return an empty `ParseResult`.
 
-Therefore, an unknown `word` cannot be treated as an argument at that level.
+### Command discovery invariant
 
-For example:
+When a grammar has children:
 
-```text
+- `word` → child-command discovery
+- `option` → current command
+- `flag` → current command
+- no token → empty `ParseResult`
+
+Therefore, having child commands does **not** prevent the current
+command from accepting options or flags.
+
+## Examples
+
+### Child command
+
+``` text
+shipyard run some.txt
+         │
+         └── word → child lookup → run exists → descend
+```
+
+`run` is a child command of `shipyard`.
+
+After descending into `run`, `some.txt` is parsed by the `run` command's
+grammar.
+
+### Current-command option
+
+``` text
+shipyard --version
+         │
+         └── option → parse using shipyard grammar
+```
+
+`--version` is handled by the `shipyard` command and is not considered a
+child command.
+
+The same applies to:
+
+``` text
+shipyard --help
+shipyard --clear-unused-data
+```
+
+### Unknown child command
+
+``` text
+shipyard hello world
+         │
+         └── word → child lookup → no "hello" child
+                              │
+                              ▼
+                    UnknownCommandError
+```
+
+Because `hello` is a `word` and `shipyard` has children, it is
+interpreted as a child-command candidate. It cannot be treated as an
+argument of `shipyard`.
+
+### Hierarchical command
+
+``` text
 shipyard task add hello.py
 
 shipyard
@@ -37,60 +131,106 @@ shipyard
 hello.py
 ```
 
-`task` and `add` are commands. `hello.py` is an argument of `add`.
+`task` is a child command of `shipyard`.
 
-The same `ParserStream` is used while moving through child commands.
+`add` is a child command of `task`.
 
-## Why?
+Once the parser reaches `add`, if `add` has no children, child discovery
+stops and `hello.py` is parsed as an argument by the `add` command's
+grammar.
 
-This keeps command routing simple and predictable.
+## ParserStream
 
-The parser finds the command. The command handles its own input.
+The same `ParserStream` is used while moving through the command
+hierarchy.
 
----
+The parser does not create a new stream when descending into a child
+command. Each command consumes tokens from the same stream until the
+terminal command is reached.
+
+This keeps token consumption consistent across the entire command
+hierarchy.
 
 ## RegistryData
 
-`RegistryData` stores metadata and information about a command.
+`RegistryData` stores metadata and structural information about a
+command.
 
-| Field         | Purpose                                                            |
-| ------------- | ------------------------------------------------------------------ |
-| `name`        | Command name.                                                      |
-| `description` | Short description of the command.                                  |
-| `help`        | Help text for the command.                                         |
-| `hidden`      | Whether the command should be hidden from normal command listings. |
-| `dir_path`    | Directory where the command exists.                                |
-| `child_path`  | Directory where the command's children are located.                |
-| `entry_class` | Python import path of the command class.                           |
-| `has_child`   | Defines whether the command accepts child commands.                |
+1. `name` --- command name.
+2. `description` --- short command description.
+3. `help` --- command help text.
+4. `hidden` --- whether the command is hidden.
+5. `dir_path` --- directory where the command exists.
+6. `child_path` --- directory where the command's children exist.
+7. `entry_class` --- Python import path of the command class.
+8. `has_child` --- whether the command has child commands.
 
-`name`, `description`, and `help` describe the command.
-
-`hidden` controls whether the command is visible.
-
-`dir_path` points to the command's directory.
-
-`child_path` points to the directory containing its child commands.
-
-`entry_class` identifies the Python class that implements the command.
-
-`has_child` tells the parser whether the next `word` should be treated as a child command.
-
----
+`RegistryData` describes **what the command is and where it exists**.
 
 ## GrammarRegistry
 
-`GrammarRegistry` defines how the current command should parse its input.
+`GrammarRegistry` defines how the current command handles input.
 
-| Field       | Purpose                                                               |
-| ----------- | --------------------------------------------------------------------- |
-| `has_child` | Defines whether the next `word` should be treated as a child command. |
-| `words`     | Allowed words for the current grammar.                                |
-| `options`   | Allowed options.                                                      |
-| `flags`     | Allowed flags.                                                        |
+1. `has_child` --- whether the current grammar participates in
+    child-command discovery.
+2. `words` --- words accepted by the current grammar.
+3. `options` --- options accepted by the current grammar.
+4. `flags` --- flags accepted by the current grammar.
 
-When `has_child` is `true`, `words` are used to find child commands.
+When `has_child` is `true`:
 
-When `has_child` is `false`, `words`, `options`, and `flags` are parsed as input for the current command.
+- `word` tokens are used for child-command discovery.
+- `options` and `flags` are handled by the current grammar.
 
-`GrammarRegistry` describes **how the current command parses input**, while `RegistryData` describes **what the command is and where it is located**.
+When `has_child` is `false`:
+
+- child discovery is skipped.
+- `words`, `options`, and `flags` are parsed as input for the current
+    command.
+
+`GrammarRegistry` describes **how the current command handles input**.
+
+## Why?
+
+`has_child` determines whether a `word` can be interpreted as a child
+command at the current command scope.
+
+For example:
+
+``` text
+shipyard run some.txt
+```
+
+Since `shipyard` has children, `run` is treated as a child-command
+candidate.
+
+However:
+
+``` text
+shipyard --version
+```
+
+`--version` is an option, not a `word`, so child discovery is skipped
+and the current `shipyard` grammar handles it.
+
+This gives command discovery a simple and predictable rule:
+
+> **When the current grammar has children, words are used for child
+> discovery; options and flags remain part of the current command's
+> grammar.**
+
+If a word is encountered while child discovery is active and no matching
+child exists, the parser raises `UnknownCommandError` rather than
+treating the word as an argument of the parent command.
+
+## Responsibility
+
+The parser is responsible for **discovering the command hierarchy**.
+
+The terminal command's grammar is responsible for **parsing the
+remaining input**.
+
+In short:
+
+> **The parser discovers the command. The terminal command handles its
+> input.**

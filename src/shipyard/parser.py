@@ -6,6 +6,8 @@ It converts raw command-line arguments into normalized tokens and exposes
 a stream interface for consuming those tokens according to a command
 grammar.
 
+its follow ADR-0001
+
 Responsibilities
 ----------------
 - Tokenize raw CLI arguments.
@@ -32,9 +34,6 @@ from .types import (
 from .utils import ListStream
 from .error import InvalidInputError, ShipyardParserError, UnknownCommandError
 
-if TYPE_CHECKING:
-    from .core import Command
-
 
 
 
@@ -59,7 +58,7 @@ def classify_token_type(stream: ListStream) -> Token:
     """
     Convert the current CLI value into a token dictionary.
 
-    The tokenizer supports three common input shapes:
+    The tokenizer supports these common input shapes:
         word
         --option value
         --option=value
@@ -130,6 +129,14 @@ def tokenize(argv: list[str]) -> TokenList:
 
 
 class ParserStream(ListStream):
+    """
+    Parse Stream is stream of sys.argv its inherit list stream so u can use its 
+    functcion too
+    parse stream stream over sys.argv arguments
+    
+    raise: 
+        ShipyardParserError: 
+    """
     
     def __init__(self, items: TokenList):
         super().__init__(items, s_idx = 0)
@@ -141,6 +148,7 @@ class ParserStream(ListStream):
         If the current grammar has child commands, search for the next
         token as a subcommand. If it has no child commands, consume the 
         remaining input according to the grammar.
+        its follow adr-0001
         """
         self.grammar_registry = grammar
         
@@ -152,8 +160,7 @@ class ParserStream(ListStream):
         
         if (
             self.grammar_registry.has_child and
-            self.current["type"] == TokenType.word and
-            bool(self.grammar_registry.words)
+            self.current["type"] == TokenType.word
         ):
             child = self.current["name"]
             

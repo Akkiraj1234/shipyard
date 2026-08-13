@@ -19,8 +19,16 @@ from .error import ShipyardFileError
 if TYPE_CHECKING:
     from .core import Command
 
+class _Skip:
+    __slots__ = ()
 
-    
+    def __repr__(self) -> str:
+        return "SKIP"
+
+SKIP = _Skip()
+
+
+
 class ListStream:
     """
     Sequential stream interface for traversing a list.
@@ -36,6 +44,7 @@ class ListStream:
             items: Sequence to traverse.
             s_idx: Starting index within the sequence.
         """
+        self.original = List(items)
         self.items = items
         self.idx = s_idx
         self.end_idx = len(items)

@@ -191,7 +191,7 @@ class ParserStream(ListStream):
         flag: set[str] = set()
         option: dict[str, str] = {}
         
-        while self.current:
+        while not self.eof:
             token = self.current           
             
             if token["type"] == TokenType.word:
@@ -227,14 +227,13 @@ class ParserStream(ListStream):
 
 def create_parser(argv: list[str] | None = None) -> ParserStream:
     """
-    Create a parser stream from an ``argv``-style list.
+    Create a parser stream from an ``argv``-style argument vector.
 
     Args:
-        argv: The complete argument vector, including the executable name. If
-            omitted, uses :data:`sys.argv`.
+        argv: Argument vector to tokenize. If omitted, uses :data:`sys.argv`.
 
     Returns:
-        A stream positioned at the first command-line argument.
+        A :class:`ParserStream` initialized with the tokenized arguments.
     """
     argv = sys.argv if argv is None else argv
     tokens = tokenize(argv)

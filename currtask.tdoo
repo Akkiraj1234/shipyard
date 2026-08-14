@@ -16,9 +16,9 @@ create the parser and parser object and take input follow ADR-0001
 
 # build_core_flag
 build the core flag
-- [ ] remove flags from parser
-- [ ] edit liststream to add remove list of item function
-- [ ] remove it from actual list wihout breaking the list to print info
+- [x] remove flags from parser
+- [x] edit liststream to add remove list of item function
+- [x] remove it from actual list wihout breaking the list to print info
 
 # ShipyardCommand
 - [ ] handle its domain of commands

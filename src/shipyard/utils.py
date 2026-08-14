@@ -4,7 +4,7 @@ from difflib import get_close_matches
 from contextlib import contextmanager
 from pathlib import Path
 from copy import deepcopy
-from typing import IO, Any, List, TYPE_CHECKING
+from typing import IO, Any, List, TYPE_CHECKING, Callable
 from types import ModuleType
 
 import hashlib
@@ -14,16 +14,32 @@ import tempfile
 import sys
 import os
 
-from .error import ShipyardFileError
+from .error import ShipyardFileError, ShipyardInternalError
 
 if TYPE_CHECKING:
     from .core import Command
 
+
+
 class _Skip:
+    """
+    Sentinel used by :class:`ListStream` to mark an item as excluded from
+    stream traversal without removing it from the underlying sequence.
+
+    ``SKIP`` preserves the original index of a masked item, allowing the
+    stream to maintain a stable cursor position while treating the item as
+    invisible during traversal. This is useful when an item must remain
+    available for diagnostics or source inspection but should no longer be
+    processed by the stream.
+
+    The sentinel is compared by identity using ``is``.
+    """
+
     __slots__ = ()
 
     def __repr__(self) -> str:
         return "SKIP"
+
 
 SKIP = _Skip()
 
@@ -31,65 +47,201 @@ SKIP = _Skip()
 
 class ListStream:
     """
-    Sequential stream interface for traversing a list.
+    Cursor-based stream for sequential traversal of a list.
 
-    Provides cursor-based navigation with lookahead support.
+    The stream maintains a stable index into the original sequence while
+    supporting cursor navigation, lookahead, and selective masking of items
+    with the :data:`SKIP` sentinel.
+
+    Masked items remain at their original positions and are ignored during
+    traversal. This allows the active stream to exclude items without
+    changing their original indexes, preserving the relationship between
+    parser state and source positions.
+
+    The stream maintains two list views:
+
+    - ``original``: An untouched copy of the input sequence, preserved for
+      source inspection and diagnostics.
+    - ``items``: The active traversal sequence, where excluded items may be
+      replaced with :data:`SKIP`.
+
+    The cursor invariant is that ``idx`` always points to a traversable item
+    or to ``end_idx`` when the stream is exhausted.
     """
 
     def __init__(self, items: List, s_idx: int = 0):
         """
-        Initialize a stream over a list.
+        Initialize the stream with a sequence and starting cursor position.
 
         Args:
-            items: Sequence to traverse.
-            s_idx: Starting index within the sequence.
+            items: Sequence of items to traverse.
+            s_idx: Initial cursor position within the sequence.
         """
-        self.original = List(items)
-        self.items = items
+        self.original = list(items)
+        self.items = list(items)
         self.idx = s_idx
         self.end_idx = len(items)
+    
+    def _next_index(self, start: int) -> int:
+        """
+        Find the next traversable index from the given position.
+
+        Starting at ``start``, advances past all positions containing
+        :data:`SKIP`. If no traversable item remains, ``end_idx`` is returned,
+        representing the end-of-file position.
+
+        Args:
+            start: Index from which to begin searching.
+
+        Returns:
+            The index of the next non-skipped item, or ``end_idx`` if the
+            stream has no remaining traversable items.
+        """
+        idx = start
+
+        while idx < self.end_idx and self.items[idx] is SKIP:
+            idx += 1
+
+        return idx
 
     @property
     def eof(self) -> bool:
         """
-        Return whether the stream has reached the end.
+        Return whether the cursor has reached or passed the end of the stream.
+
+        Returns:
+            ``True`` when the cursor is at or beyond ``end_idx``; otherwise ``False``.
         """
         return self.idx >= self.end_idx
 
     @property
     def current(self) -> Any | None:
         """
-        Return the current item, or `None` if the stream is exhausted.
+        Return the item at the current cursor position.
+
+        The cursor is expected to point to a traversable item whenever the
+        stream is not exhausted. Reaching a :data:`SKIP` item at the current
+        position indicates a violation of the stream's traversal invariant
+        and raises :class:`ShipyardInternalError`.
+
+        Returns:
+            The current item, or ``None`` if the stream is exhausted.
+
+        Raises:
+            ShipyardInternalError: If the cursor points to a :data:`SKIP`
+                item while the stream is not exhausted.
         """
         if self.eof:
             return None
+
+        # its handling this error becuse of invariant
+        # that its never get skip idx
+        if self.items[self.idx] is SKIP:
+            raise ShipyardInternalError(
+                "ListStream invariant violated: current item is SKIP"
+            )
         
         return self.items[self.idx]
 
     @property
     def peek(self) -> Any | None:
         """
-        Return the next item without advancing the stream.
+        Return the next traversable item without advancing the cursor.
+
+        Skipped positions are ignored while searching for the next item.
+        Calling this method does not modify the current cursor position.
+
+        Returns:
+            The next non-skipped item, or ``None`` if no traversable item
+            remains.
         """
-        if self.idx + 1 >= self.end_idx:
+        idx = self._next_index(self.idx + 1)
+        
+        if idx >= self.end_idx:
             return None
         
-        return self.items[self.idx + 1]
+        return self.items[idx]
 
     def move(self, count: int = 1) -> None:
         """
-        Advance the stream by the given number of elements.
-        """
-        self.idx += count
+        Advance the cursor by the requested number of traversable items.
 
+        Skipped positions are ignored during traversal. If the stream reaches
+        the end before the requested number of moves is completed, traversal
+        stops at the end-of-file position.
+
+        Args:
+            count: Number of traversable items to advance over.
+        """
+        for _ in range(count):
+            if self.eof: break
+            self.idx = self._next_index(self.idx + 1)
+        
     def next(self) -> Any | None:
         """
-        Advance the stream and return the new current item.
+        Advance the cursor by one traversable item and return the new item.
+
+        Returns:
+            The item at the new cursor position, or ``None`` if advancing
+            reaches the end of the stream.
         """
         self.move()
         return self.current
     
+    def remove_items(
+        self,
+        removable: list[str],
+        key: Callable[[Any], Any] | None = None,
+    ) -> list[str]:
+        """
+        Mark matching items as excluded from stream traversal.
+
+        Matching positions are replaced with :data:`SKIP` rather than being
+        physically removed from the active sequence. This preserves their
+        original indexes while preventing them from being returned during
+        traversal.
+
+        If ``key`` is provided, it extracts the value used for matching each
+        item. This is useful when stream items are structured objects, such as
+        parser tokens, and the match should be performed against one field.
+        If the current position is skipped, the cursor advances to the next
+        traversable item or EOF.
+
+        Args:
+            removable: Values identifying items to exclude from stream traversal.
+            key: Optional function used to extract a comparison value from each
+                item before matching.
+
+        Returns:
+            A list containing the values of items that were successfully marked
+            as skipped.
+        """
+        items = set(removable)
+        found = []
+
+        for idx, item in enumerate(self.items):
+            candidate = key(item) if key else item
+            
+            if candidate in items:
+                found.append(candidate)
+                self.items[idx] = SKIP
+
+        if not self.eof and self.items[self.idx] is SKIP:
+            self.idx = self._next_index(self.idx)
+
+        return found
+            
     def __str__(self) -> str:
+        """
+        Return a human-readable representation of the stream and cursor state.
+
+        The representation displays all positions in the active sequence and
+        marks the current cursor position. When the cursor has reached the
+        end of the stream, an explicit EOF marker is displayed.
+
+        Returns:
+            A formatted string describing the current stream state.
+        """
         lines = ["ListStream"]
         
         for num, item in enumerate(self.items):

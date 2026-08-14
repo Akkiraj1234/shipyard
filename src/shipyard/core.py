@@ -17,6 +17,13 @@ from .types import (
     CommandRegistry
 )
 
+_CORE_ROOT_FLAGS = {
+    "help",
+    "dev",
+    "no-color",
+    "only-json",
+}
+
 
 def build_context() -> dict[str, Any]:
     """
@@ -314,21 +321,17 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     dict[str, bool]
         A mapping of each detected core flag to ``True``.
     """
-    _CORE_ROOT_FLAGS = {
-        "help",
-        "dev",
-        "no-color",
-        "only-json",
-    }
-    
-    items: TokenList = parser.items
     result: dict[str, bool] = {}
+    flags = parser.remove_items(
+        _CORE_ROOT_FLAGS,
+        key = lambda token: token["name"]
+    )
 
-    for token in items:
-        if token["type"] is TokenType.flag and token["name"] in _CORE_ROOT_FLAGS:
-            result[token["name"]] = True
+    for flag in flags:
+        result[flag] = True
     
     return result
+
 
 
 def cleanup(command: Command, ctx: dict[str, Any]) -> None:

@@ -79,6 +79,7 @@ def test_build_core_flag_collects_only_recognized_root_flags():
     parser = create_parser(["shipyard", "--dev", "--only-json", "--unknown"])
 
     assert build_core_flag(parser) == {"dev": True, "only-json": True}
+    assert parser.current["name"] == "unknown"
 
 
 def test_build_context_and_command_help_expose_core_command_information(monkeypatch, tmp_path):

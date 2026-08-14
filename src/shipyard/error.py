@@ -63,6 +63,10 @@ class UsageError(ShipyardError):
     """The supplied command line does not match a command grammar."""
 
     title = "usage error"
+    
+    
+class ShipyardInternalError(RuntimeError):
+    """Raised when an internal application invariant is violated."""
 
 
 class ShipyardParserError(UsageError):

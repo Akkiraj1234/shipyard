@@ -2,12 +2,14 @@ import sys
 
 import pytest
 
-from shipyard.error import ShipyardFileError
+from shipyard.error import ShipyardFileError, ShipyardInternalError
 from shipyard.utils import (
     atomic_write,
     best_matches,
     load_module,
     merge_dicts,
+    ListStream,
+    SKIP,
     safe_open,
 )
 
@@ -45,6 +47,50 @@ def test_merge_dicts_merges_nested_values_without_mutating_defaults():
 
     assert merged == {"project": {"name": "Shipyard", "version": "0.2"}, "enabled": False}
     assert defaults["project"]["version"] == "0.1"
+
+
+def test_list_stream_traverses_items_with_peek_move_and_next():
+    stream = ListStream(["shipyard", "doctor", "init"])
+
+    assert stream.current == "shipyard"
+    assert stream.peek == "doctor"
+
+    stream.move()
+    assert stream.current == "doctor"
+    assert stream.peek == "init"
+
+    assert stream.next() == "init"
+    assert stream.current == "init"
+
+    stream.move()
+    assert stream.eof is True
+    assert stream.current is None
+    assert stream.peek is None
+
+
+def test_list_stream_remove_items_skips_values_without_changing_indexes():
+    stream = ListStream(["shipyard", "doctor", "init", "doctor"])
+
+    removed = stream.remove_items(["doctor"])
+
+    assert removed == ["doctor", "doctor"]
+    assert stream.items == ["shipyard", SKIP, "init", SKIP]
+    assert stream.current == "shipyard"
+
+    stream.move()
+    assert stream.current == "init"
+    assert stream.peek is None
+
+
+def test_list_stream_current_raises_when_cursor_points_at_skip():
+    stream = ListStream(["shipyard", "doctor"])
+    stream.items[0] = SKIP
+
+    with pytest.raises(
+        ShipyardInternalError,
+        match="ListStream invariant violated: current item is SKIP",
+    ):
+        _ = stream.current
 
 
 def test_best_matches_and_load_module_support_public_lookup_forms(tmp_path):

@@ -1,7 +1,7 @@
 # create_parser
 create the parser and parser object and take input follow ADR-0001
 - [x] make sure child is mandotory
-- [ ] make everyone resepct the new ADR-0001
+- [x] make everyone resepct the new ADR-0001
     - cli.py
     - config.py
     0 core.py

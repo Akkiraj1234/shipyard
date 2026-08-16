@@ -97,6 +97,7 @@ def test_build_context_and_command_help_expose_core_command_information(monkeypa
 def test_command_registry_discovers_valid_metadata_and_keeps_going_after_errors(tmp_path):
     valid = tmp_path / "valid"
     valid.mkdir()
+    (valid / "__init__.py").write_text("", encoding="utf-8")
     (valid / "main.py").write_text("class TempCommand: pass\n", encoding="utf-8")
     (valid / "metadata.py").write_text(
         "from shipyard.types import RegistryData\n"
@@ -105,6 +106,7 @@ def test_command_registry_discovers_valid_metadata_and_keeps_going_after_errors(
     )
     broken = tmp_path / "broken"
     broken.mkdir()
+    (broken / "__init__.py").write_text("", encoding="utf-8")
     (broken / "metadata.py").write_text("METADATA = 'not registry data'\n", encoding="utf-8")
 
     registry, errors = RegistryProbe({})._get_child_metadata(tmp_path)
@@ -118,6 +120,7 @@ def test_command_registry_discovers_valid_metadata_and_keeps_going_after_errors(
 def test_command_uses_default_child_discovery_and_caches_the_registry(tmp_path):
     child = tmp_path / "child"
     child.mkdir()
+    (child / "__init__.py").write_text("", encoding="utf-8")
     (child / "metadata.py").write_text(
         "from shipyard.types import RegistryData\n"
         "METADATA = RegistryData('child', 'Child command', 'help')\n",
@@ -134,6 +137,7 @@ def test_command_uses_default_child_discovery_and_caches_the_registry(tmp_path):
 
 def test_load_command_instantiates_a_declared_command_class(tmp_path):
     module_path = tmp_path / "command.py"
+    (tmp_path / "__init__.py").write_text("", encoding="utf-8")
     module_path.write_text(
         "from shipyard.core import Command\n"
         "from shipyard.types import GrammarRegistry, RegistryData\n"
@@ -144,7 +148,13 @@ def test_load_command_instantiates_a_declared_command_class(tmp_path):
         "    def run(self, result): return 0\n",
         encoding="utf-8",
     )
-    metadata = RegistryData("temp", "", "", entry_class=f"{module_path}:TempCommand")
+    metadata = RegistryData(
+        "temp",
+        "",
+        "",
+        dir_path=tmp_path,
+        entry_class=f"{module_path}:TempCommand",
+    )
     root_ctx = {"dev": True}
 
     command = load_command(root_ctx, metadata)

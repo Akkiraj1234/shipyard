@@ -6,6 +6,7 @@ from shipyard.error import ShipyardFileError, ShipyardInternalError
 from shipyard.utils import (
     atomic_write,
     best_matches,
+    import_command_module,
     load_module,
     merge_dicts,
     ListStream,
@@ -100,3 +101,18 @@ def test_best_matches_and_load_module_support_public_lookup_forms(tmp_path):
     assert best_matches("docter", ["doctor", "init"])[0] == "doctor"
     assert load_module("json") is sys.modules["json"]
     assert load_module(plugin_path).value == 42
+
+
+def test_import_command_module_supports_relative_imports(tmp_path):
+    command_dir = tmp_path / "status"
+    command_dir.mkdir()
+    (command_dir / "__init__.py").write_text("", encoding="utf-8")
+    (command_dir / "logic.py").write_text("VALUE = 42\n", encoding="utf-8")
+    (command_dir / "main.py").write_text(
+        "from .logic import VALUE\n",
+        encoding="utf-8",
+    )
+
+    module = import_command_module(command_dir / "main.py", command_dir)
+
+    assert module.VALUE == 42

@@ -4,7 +4,7 @@ create the parser and parser object and take input follow ADR-0001
 - [x] make everyone resepct the new ADR-0001
     - cli.py
     - config.py
-    0 core.py
+    - core.py
     - error.py
     - parser.py
     - shipyard.py
@@ -12,7 +12,7 @@ create the parser and parser object and take input follow ADR-0001
     - utils.py
     - `__init__.py`
     - `__main__.py`
-    0 `__version__.py`
+    - `__version__.py`
 
 # build_core_flag
 build the core flag
@@ -40,13 +40,13 @@ build the core flag
 # cleanup
 
 # other
-- [ ] make help take command as argument to pass help infomation
-- [ ] support version, help, dev, no-color, only-json, dev-traceback
-- [ ] write `command_help` function
-- [ ] write `cleanup` function
+- [x] make help take command as argument to pass help infomation
+- [x] support version, help, dev, no-color, only-json, dev-traceback
+- [x] write `command_help` function
+- [-] write `cleanup` function
 - [ ] make sure run and return has function where it can be in way where it can return value and item in dict and as reuqtested
-- [ ] think how ctx and core_flags should be handled
-- [ ] besdies verstion what otehr function should shipyard main have to handle
+- [x] think how ctx and core_flags should be handled
+- [x] besdies verstion what otehr function should shipyard main have to handle
 
 
 * [/] Design and implement the help system.
@@ -55,9 +55,6 @@ build the core flag
   * Support help for the current command scope.
   * Support child-command discovery.
   * Provide useful suggestions for unknown commands.
-
-
-
 
 
 # for v2.0

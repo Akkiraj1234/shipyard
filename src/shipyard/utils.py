@@ -484,3 +484,86 @@ def import_file(path: Path, cache: bool = False) -> ModuleType:
         sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def import_command_module(path: Path, command_dir: Path | None = None) -> ModuleType:
+    """
+    Import a module from an isolated Shipyard command package.
+
+    The command directory must contain ``__init__.py``. It is loaded under a
+    stable synthetic package name derived from its absolute path. Modules in
+    that directory can therefore use relative imports such as
+    ``from .logic import run`` without sharing an import namespace with other
+    commands or plugins.
+
+    Args:
+        path: Python module file to import from the command package.
+        command_dir: Root directory of the command package. Defaults to the
+            directory containing ``path``.
+
+    Returns:
+        The imported command-package module.
+
+    Raises:
+        ImportError: If the command directory is not a Python package or the
+            requested module cannot be loaded.
+        ValueError: If ``path`` is outside the command package.
+    """
+    path = Path(path).resolve()
+    command_dir = Path(command_dir or path.parent).resolve()
+    init_file = command_dir / "__init__.py"
+
+    if not path.is_file():
+        raise FileNotFoundError(f"module file does not exist: {path}")
+    if path.suffix != ".py":
+        raise ValueError(f"module file must have a .py extension: {path}")
+    if not init_file.is_file():
+        raise ImportError(f"command package is missing __init__.py: {command_dir}")
+
+    try:
+        relative_path = path.relative_to(command_dir).with_suffix("")
+    except ValueError as exc:
+        raise ValueError(
+            f"module file '{path}' is outside command package '{command_dir}'"
+        ) from exc
+
+    package_digest = hashlib.sha256(os.fspath(command_dir).encode()).hexdigest()[:12]
+    package_name = f"_shipyard_command_{package_digest}"
+
+    if package_name not in sys.modules:
+        package_spec = importlib.util.spec_from_file_location(
+            package_name,
+            init_file,
+            submodule_search_locations=[os.fspath(command_dir)],
+        )
+        if package_spec is None or package_spec.loader is None:
+            raise ImportError(f"could not create command package for {command_dir}")
+
+        package = importlib.util.module_from_spec(package_spec)
+        sys.modules[package_name] = package
+
+        try:
+            package_spec.loader.exec_module(package)
+        except Exception:
+            sys.modules.pop(package_name, None)
+            raise
+
+    module_name = f"{package_name}.{'/'.join(relative_path.parts).replace('/', '.')}"
+
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+
+    module_spec = importlib.util.spec_from_file_location(module_name, path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"could not create import specification for {path}")
+
+    module = importlib.util.module_from_spec(module_spec)
+    sys.modules[module_name] = module
+
+    try:
+        module_spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
+
+    return module

@@ -1,11 +1,12 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, final
 from pathlib import Path
+import json
 
 from .config import load_config
 from .parser import ParserStream
-from .utils import error_to_warning, import_file
+from .utils import error_to_warning, import_command_module
 from .error import CommandLoadError, RegistryError
 
 from .types import (
@@ -17,11 +18,13 @@ from .types import (
 
 _CORE_ROOT_FLAGS = {
     "help",
-    "dev",
-    "no-color",
+    "no-color",  # no color is not supported yet
     "only-json",
-    "dev-trackback"
+    "dev", 
+    "dev-trackback" 
 }
+
+
 
 def build_context() -> dict[str, Any]:
     """
@@ -143,6 +146,7 @@ class Command(ABC):
         if self._child_metadata is None:
             if self.metadata.child_path is None:
                 self._child_metadata = {}
+                
             else:
                 self._child_metadata, errors = self._get_child_metadata(
                     self.metadata.child_path
@@ -221,93 +225,136 @@ class Command(ABC):
         return set(command_registry.keys())
     
     def __import_metadata(self, metadata_file: Path, registry: CommandRegistry) -> RegistryData:
-            """Load, validate, and resolve command metadata.
-    
-            Imports the ``METADATA`` object from a command's ``metadata.py``,
-            validates its registry definition, and resolves filesystem paths
-            and the command entry class into usable forms.
-            its follow ADR-0002
-    
-            Raises
-            ------
-            TypeError
-                If ``METADATA`` is not a ``RegistryData`` instance.
-            ValueError
-                If the command name is already registered or the entry class
-                has an invalid format.
-            NotADirectoryError
-                If the configured child path does not point to a directory.
-            FileNotFoundError
-                If the entry class module does not exist.
-            """
+        """Load, validate, and resolve command metadata.
+
+        Imports the ``METADATA`` object from a command's ``metadata.py``,
+        validates its registry definition, and resolves filesystem paths
+        and the command entry class into usable forms.
+        its follow ADR-0002
+
+        Raises
+        ------
+        TypeError
+            If ``METADATA`` is not a ``RegistryData`` instance.
+        ValueError
+            If the command name is already registered or the entry class
+            has an invalid format.
+        NotADirectoryError
+            If the configured child path does not point to a directory.
+        FileNotFoundError
+            If the entry class module does not exist.
+        """
+        
+        metadata_module = import_command_module(
+            metadata_file,
+            metadata_file.parent,
+        )
+        metadata = metadata_module.METADATA
+        
+        if not isinstance(metadata, RegistryData):
+            raise CommandLoadError(
+                f"{metadata_file} must define METADATA as a RegistryData instance"
+            )
+        
+        if metadata.name in registry:
+            raise CommandLoadError(f"duplicate command name '{metadata.name}'")
+        
+        command_dir = metadata_file.parent.resolve()
+        
+        # resolving metadata.dir_path
+        if metadata.dir_path is None:
+            metadata.dir_path = command_dir
             
-            metadata_module = import_file(metadata_file, cache = False)
-            metadata = metadata_module.METADATA
+        else:
+            metadata.dir_path = Path(metadata.dir_path)
             
-            if not isinstance(metadata, RegistryData):
+            if not metadata.dir_path.is_absolute():
+                metadata.dir_path = command_dir / metadata.dir_path
+            
+            metadata.dir_path = metadata.dir_path.resolve()
+            
+        # resolve child_path
+        if metadata.child_path is not None:
+            metadata.child_path = Path(metadata.child_path)
+            
+            if not metadata.child_path.is_absolute():
+                metadata.child_path = (
+                    metadata.dir_path / metadata.child_path
+                )
+            
+            metadata.child_path = metadata.child_path.resolve()
+            
+            if not metadata.child_path.is_dir():
                 raise CommandLoadError(
-                    f"{metadata_file} must define METADATA as a RegistryData instance"
+                    f"child command directory does not exist: {metadata.child_path}"
                 )
             
-            if metadata.name in registry:
-                raise CommandLoadError(f"duplicate command name '{metadata.name}'")
+        # resolve entry class
+        if metadata.entry_class:
+            module_name, separator, attribute = (
+                metadata.entry_class.partition(":")
+            )
             
-            command_dir = metadata_file.parent.resolve()
+            if not separator or not module_name or not attribute:
+                raise CommandLoadError(
+                    "entry_class must have the form 'module:class'"
+                )
             
-            # resolving metadata.dir_path
-            if metadata.dir_path is None:
-                metadata.dir_path = command_dir
-                
+            module_path = Path(module_name)
+
+            if module_path.is_absolute():
+                module_file = module_path
             else:
-                metadata.dir_path = Path(metadata.dir_path)
-                
-                if not metadata.dir_path.is_absolute():
-                    metadata.dir_path = command_dir / metadata.dir_path
-                
-                metadata.dir_path = metadata.dir_path.resolve()
-                
-            # resolve child_path
-            if metadata.child_path is not None:
-                metadata.child_path = Path(metadata.child_path)
-                
-                if not metadata.child_path.is_absolute():
-                    metadata.child_path = (
-                        metadata.dir_path / metadata.child_path
-                    )
-                
-                metadata.child_path = metadata.child_path.resolve()
-                
-                if not metadata.child_path.is_dir():
-                    raise CommandLoadError(
-                        f"child command directory does not exist: {metadata.child_path}"
-                    )
-                
-            # resolve entry class
-            if metadata.entry_class:
-                module_name, separator, attribute = (
-                    metadata.entry_class.partition(":")
-                )
-                
-                if not separator or not module_name or not attribute:
-                    raise CommandLoadError(
-                        "entry_class must have the form 'module:class'"
-                    )
-                
                 module_file = (
                     metadata.dir_path
                     / f"{module_name.replace('.', '/')}.py"
                 )
-                
-                if not module_file.is_file():
-                    raise CommandLoadError(
-                        f"entry class module not found: {module_file}"
-                    )
-                
-                metadata.entry_class = f"{module_file}:{attribute}"
             
-            return metadata
+            if not module_file.is_file():
+                raise CommandLoadError(
+                    f"entry class module not found: {module_file}"
+                )
+            
+            metadata.entry_class = f"{module_file}:{attribute}"
+        
+        return metadata
+    
+    @final
+    def deco_run(self, parser_stream: ParserStream) -> int:
+        """
+        Execute the command through Shipyard's common runtime layer.
+        """
+        if "help" in self.root_ctx:
+            value = command_help(self)
+            
+        else:
+            value = self.run(parser_stream)
+
+        print_output(value, self.root_ctx)
+        return 0
 
 
+def print_output(data: str | dict, ctx: dict) -> None:
+    """
+    Format and print command output according to the execution context.
+    """
+    # no color is not supported yet
+    if "only-json" in ctx:
+        if isinstance(data, str):
+            data = {"output": data}
+
+        try:
+            output = json.dumps(data, indent=2)
+        except (TypeError, ValueError):
+            output = json.dumps(
+                {"output": str(data)},
+                indent=2,
+            )
+    else:
+        output = data if isinstance(data, str) else str(data)
+
+    print(output)
+               
 
 def command_help(command: Command) -> str:
     """
@@ -332,7 +379,7 @@ def execute(parser_stream: ParserStream, command: Command) -> int:
             )
             continue
         
-        return command.run(result)
+        return command.deco_run(parser_stream)
 
 
 def build_core_flag(parser: ParserStream) -> dict[str, bool]:
@@ -361,7 +408,6 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     return result
 
 
-
 def cleanup(command: Command, ctx: dict[str, Any]) -> None:
     # no need right now
     pass
@@ -382,13 +428,19 @@ def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:
     
 
     try:
-        module = import_file(Path(module_file), cache=False)
+        module = import_command_module(
+            Path(module_file),
+            metadata.dir_path,
+        )
+        
     except (ImportError, OSError) as exc:
         raise CommandLoadError(
             f"could not import command '{metadata.name}' from {module_file}: {exc}"
         ) from exc
+        
     try:
         entry = getattr(module, attribute)
+        
     except AttributeError as exc:
         raise CommandLoadError(
             f"command '{metadata.name}' entry class '{attribute}' was not found"

@@ -1,4 +1,4 @@
-from shipyard.types import RegistryData
+from shipyard import RegistryData
 from pathlib import Path
 
 

@@ -8,6 +8,7 @@ from .config import load_config
 from .parser import ParserStream
 from .utils import error_to_warning, import_command_module
 from .error import CommandLoadError, RegistryError
+from .output import OutputFormatter
 
 from .types import (
     GrammarRegistry,
@@ -334,24 +335,18 @@ class Command(ABC):
         return 0
 
 
-def print_output(data: str | dict, ctx: dict) -> None:
+def print_output(data: object, ctx: dict) -> None:
     """
     Format and print command output according to the execution context.
     """
-    # no color is not supported yet
-    if "only-json" in ctx:
-        if isinstance(data, str):
-            data = {"output": data}
+    formatter = OutputFormatter(
+        no_color="no-color" in ctx,
+    )
 
-        try:
-            output = json.dumps(data, indent=2)
-        except (TypeError, ValueError):
-            output = json.dumps(
-                {"output": str(data)},
-                indent=2,
-            )
+    if "only-json" in ctx:
+        output = formatter.json(data)
     else:
-        output = data if isinstance(data, str) else str(data)
+        output = formatter.format(data)
 
     print(output)
                
@@ -379,7 +374,7 @@ def execute(parser_stream: ParserStream, command: Command) -> int:
             )
             continue
         
-        return command.deco_run(parser_stream)
+        return command.deco_run(result)
 
 
 def build_core_flag(parser: ParserStream) -> dict[str, bool]:

@@ -1,5 +1,7 @@
-import json
+from blessed import Terminal
 from typing import Any
+import json
+
 
 
 class OutputFormatter:
@@ -8,6 +10,7 @@ class OutputFormatter:
     """
 
     def __init__(self, *, no_color: bool = False) -> None:
+        self.term = Terminal()
         self.no_color = no_color
 
     def format(self, data: Any) -> str:
@@ -49,14 +52,19 @@ class OutputFormatter:
 
         return "\n".join(lines)
 
-    def _format_value(self, key: str, value: Any, level: int = 0) -> list[str]:
+    def _format_value(
+        self,
+        key: str,
+        value: Any,
+        level: int = 0,
+    ) -> list[str]:
         """
         Format one dictionary value recursively.
         """
         indent = "  " * level
 
         if isinstance(value, dict):
-            lines = [f"{indent}{key}:"]
+            lines = [f"{indent}{self._key(key)}:"]
             for child_key, child_value in value.items():
                 lines.extend(
                     self._format_value(
@@ -68,10 +76,12 @@ class OutputFormatter:
             return lines
 
         if isinstance(value, list):
-            lines = [f"{indent}{key}:"]
+            lines = [f"{indent}{self._key(key)}:"]
+
             for item in value:
                 if isinstance(item, dict):
                     lines.append(f"{indent}  -")
+
                     for child_key, child_value in item.items():
                         lines.extend(
                             self._format_value(
@@ -82,6 +92,16 @@ class OutputFormatter:
                         )
                 else:
                     lines.append(f"{indent}  - {item}")
+
             return lines
 
-        return [f"{indent}{key}: {value}"]
+        return [f"{indent}{self._key(key)}: {value}"]
+
+    def _key(self, key: str) -> str:
+        """
+        Format a dictionary key for terminal output.
+        """
+        if self.no_color:
+            return key
+
+        return f"{self.term.cyan}{self.term.bold}{key}{self.term.normal}"

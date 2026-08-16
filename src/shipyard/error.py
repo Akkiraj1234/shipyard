@@ -1,5 +1,3 @@
-"""User-facing errors and rendering for the Shipyard command line."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,31 +12,28 @@ if TYPE_CHECKING:
     from .parser import ParserStream
 
 
-RED = "\033[31m"
-YELLOW = "\033[33m"
-CYAN = "\033[36m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
-
 
 def _suggest(value: str, choices: Iterable[str]) -> str | None:
-    """Return the closest known spelling of ``value``, when one exists."""
-    matches = get_close_matches(value, sorted(set(choices)), n=1, cutoff=0.6)
+    """
+    Return the closest known spelling of ``value``, when one exists.
+    """
+    matches = get_close_matches(
+        value, 
+        sorted(set(choices)), 
+        n = 1, 
+        cutoff = 0.6
+    )
     return matches[0] if matches else None
 
 
 class ShipyardError(Exception):
-    """Base class for errors Shipyard can explain directly to a user."""
+    """
+    Base class for errors Shipyard can explain directly to a user.
+    """
 
     title = "error"
 
-    def __init__(
-        self,
-        message: str,
-        *,
-        hint: str | None = None,
-        details: Iterable[str] = (),
-    ) -> None:
+    def __init__(self, message: str, *, hint: str | None = None, details: Iterable[str] = ()) -> None:
         self.message = message
         self.hint = hint
         self.details = tuple(details)
@@ -54,7 +49,7 @@ class ShipyardError(Exception):
 
     def debug(self) -> str:
         return repr(self)
-
+    
     def __str__(self) -> str:
         return self.pretty()
 

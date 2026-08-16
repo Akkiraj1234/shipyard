@@ -21,6 +21,16 @@ def test_create_load_and_save_config_round_trip(tmp_path):
     assert (root / CONFIG_FILE_NAME).is_file()
 
 
+def test_default_config_defines_project_metadata_and_managed_locations(tmp_path):
+    _, config = create_config(tmp_path)
+
+    assert config["author"]["name"] == "Your Name"
+    assert config["github"]["default_branch"] == "main"
+    assert config["paths"]["shipyard"] == ".shipyard"
+    assert config["files"]["current_feature"] == ".shipyard/CURRENT.md"
+    assert config["settings"]["auto_sync"] is False
+
+
 def test_load_config_finds_a_parent_project_config_and_merges_defaults(tmp_path):
     root = tmp_path / "project"
     nested = root / "src" / "shipyard"

@@ -30,6 +30,9 @@ The important separation is:
 - The CLI is the process boundary and sends raised exceptions to the error
   renderer.
 
+For the contributor workflow for defining a command and its children, see the
+[command creation guide](guides/creating-commands.md).
+
 ## Application Entry Points
 
 The installed `shipyard` command points to `shipyard.cli:main`.
@@ -126,6 +129,9 @@ commands when its grammar or registry is requested.
 - Loaded TOML is recursively merged with `DEFAULT_CONFIG`.
 - `create_config()` creates a default configuration.
 - `save_config()` writes configuration through `atomic_write()`.
+- The default schema has project, author, GitHub, path, file-location, and
+  settings sections. The configuration guide describes the fields; ADR-0003
+  records the decision behind project-root discovery.
 
 `Command.bootstrap()` calls `build_context()`, which loads the configuration
 and adds the configuration directory as `root_path`.

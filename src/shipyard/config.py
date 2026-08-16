@@ -21,20 +21,29 @@ DEFAULT_TOML = """
 [project]
 name = "My Project"
 version = "0.1.0"
-description = "A simple project built with Shipyard."
+description = "A project managed with Shipyard."
+
+[author]
+name = "Your Name"
 
 [github]
-repository = "https://github.com/Akkiraj1234/Shipyard"
+username = "your-github-username"
+repository = "https://github.com/your-github-username/your-project"
 default_branch = "main"
+
+[paths]
+shipyard = ".shipyard"
 
 [files]
 roadmap = "ROADMAP.md"
-tasks = "TASKS.md"
-ideas = "IDEAS.md"
+tasks = ".shipyard/TASKS.md"
+current_feature = ".shipyard/CURRENT.md"
+additional_changes = ".shipyard/CHANGES.md"
+ideas = "docs/proposals"
 changelog = "CHANGELOG.md"
 
 [settings]
-auto_sync = true
+auto_sync = false
 """
 
 RECURSIVE_CONFIG_SEARCH = 5
@@ -122,10 +131,7 @@ def create_config(dir_path: Path | None = None) -> tuple[Path, dict[str, Any]]:
     return current, config
     
     
-def save_config(
-    config: dict[str, Any],
-    dir_path: Path | str,
-) -> None:
+def save_config(config: dict[str, Any], dir_path: Path | str) -> None:
     """
     Save the configuration to ``shipyard.toml``.
 

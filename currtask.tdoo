@@ -21,21 +21,20 @@ build the core flag
 - [x] remove it from actual list wihout breaking the list to print info
 
 # ShipyardCommand
-- [ ] handle its domain of commands
-- [ ] write run comamnd
+- [x] handle its domain of commands
+- [x] write run comamnd
 
 # execute
-- [ ] check if execute follow adr-0001
+- [x] check if execute follow adr-0001
 
-# shipyard_error_print
+
+# error.py
+
 - [ ] better error system and prinintg
-
-## error.py
 - [ ] Commands return integer exit statuses. 
 - [ ] error have interger exit status code
 - [ ] Propagate explicit command return codes.
 - [ ] document Define standard CLI exit-code constants. 
-
 - [ ] check if all raise meningfull error and its handle properly in all place
 
 # cleanup
@@ -43,6 +42,11 @@ build the core flag
 # other
 - [ ] make help take command as argument to pass help infomation
 - [ ] support version, help, dev, no-color, only-json, dev-traceback
+- [ ] write `command_help` function
+- [ ] write `cleanup` function
+- [ ] make sure run and return has function where it can be in way where it can return value and item in dict and as reuqtested
+- [ ] think how ctx and core_flags should be handled
+- [ ] besdies verstion what otehr function should shipyard main have to handle
 
 
 * [/] Design and implement the help system.
@@ -51,3 +55,12 @@ build the core flag
   * Support help for the current command scope.
   * Support child-command discovery.
   * Provide useful suggestions for unknown commands.
+
+
+
+
+
+# for v2.0
+1. Replace `ctx` dependency injection with a globally accessible root context,
+   initialized during application startup so it can be accessed throughout
+   the command hierarchy.

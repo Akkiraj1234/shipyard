@@ -5,12 +5,10 @@ from pathlib import Path
 
 from .config import load_config
 from .parser import ParserStream
-from .utils import import_file
+from .utils import error_to_warning, import_file
 from .error import CommandLoadError, RegistryError
 
 from .types import (
-    TokenList,
-    TokenType,
     GrammarRegistry,
     RegistryData,
     ParseResult,
@@ -22,8 +20,8 @@ _CORE_ROOT_FLAGS = {
     "dev",
     "no-color",
     "only-json",
+    "dev-trackback"
 }
-
 
 def build_context() -> dict[str, Any]:
     """
@@ -35,6 +33,7 @@ def build_context() -> dict[str, Any]:
         **data,
         "root_path": root_path
     }
+
 
 class Command(ABC):
     """
@@ -60,6 +59,7 @@ class Command(ABC):
         
         self.root_ctx = root_ctx
         self.command_name = name
+        self._child_metadata: CommandRegistry | None = None
     
     @property
     def name(self) -> str:
@@ -98,10 +98,13 @@ class Command(ABC):
         """
         ...
     
-    @abstractmethod
     def get_child(self, name: str) -> Command:
         """
         Resolve and return a child command by name.
+
+        The default implementation resolves a child from ``child_metadata()``
+        and loads its declared command class. Normal parent and leaf commands
+        inherit this behavior.
 
         Parameters
         ----------
@@ -115,17 +118,38 @@ class Command(ABC):
 
         Raises
         ------
-        KeyError
+        CommandLoadError
             If no child command with the given name exists.
         """
-        ...
+        metadata = self.child_metadata().get(name)
+
+        if metadata is None:
+            raise CommandLoadError(f"unknown command '{name}'")
+
+        return load_command(self.root_ctx, metadata)
     
-    @abstractmethod
     def child_metadata(self) -> CommandRegistry:
         """
         Return the registry metadata for this command's children.
+
+        The default implementation discovers and caches metadata from the
+        command's configured ``child_path``. Discovery warnings are rendered
+        without preventing valid children from being used.
+
+        Leaf commands have no ``child_path``, so they receive an empty
+        registry. Override this method only when children come from a custom
+        source, such as a plugin registry.
         """
-        ...
+        if self._child_metadata is None:
+            if self.metadata.child_path is None:
+                self._child_metadata = {}
+            else:
+                self._child_metadata, errors = self._get_child_metadata(
+                    self.metadata.child_path
+                )
+                error_to_warning(errors)
+
+        return self._child_metadata
     
     @abstractmethod
     def run(self, result: ParseResult) -> int:
@@ -152,6 +176,7 @@ class Command(ABC):
         ``metadata.py`` files. Invalid command metadata is collected as
         a ``RegistryError`` so that one invalid command does not prevent
         other commands from being discovered.
+        follow ADR-0002
 
         Returns
         -------
@@ -201,6 +226,7 @@ class Command(ABC):
             Imports the ``METADATA`` object from a command's ``metadata.py``,
             validates its registry definition, and resolves filesystem paths
             and the command entry class into usable forms.
+            its follow ADR-0002
     
             Raises
             ------
@@ -293,6 +319,7 @@ def command_help(command: Command) -> str:
 def execute(parser_stream: ParserStream, command: Command) -> int:
     """
     Resolve the command hierarchy, validate arguments, and dispatch once.
+    its follow ADR-0001
     """
     while True:
         result = parser_stream.parse(
@@ -321,6 +348,7 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     dict[str, bool]
         A mapping of each detected core flag to ``True``.
     """
+    
     result: dict[str, bool] = {}
     flags = parser.remove_items(
         _CORE_ROOT_FLAGS,
@@ -342,6 +370,7 @@ def cleanup(command: Command, ctx: dict[str, Any]) -> None:
 def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:
     """
     Instantiate a command implementation declared by registry metadata.
+    follow ADR-0002
     """
     
     if metadata.entry_class is None:

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from shipyard import GrammarRegistry
 from shipyard.config import CONFIG_FILE_NAME
 from shipyard.types import ParseResult
 from shipyard.core import Command
+from .metadata import METADATA
+
 
 flags: set[str] = set()
 options: dict[str, str] = {}
@@ -39,17 +42,14 @@ class DoctorCommand(Command):
         
     @property
     def metadata(self):
-        return None
+        return METADATA
     
     def grammar(self): 
-        return None
-    
-    def get_child(self, name: str):
-        return None
-    
-    def child_metadata(self):
-        return None
+        return GrammarRegistry(
+            has_child=self.metadata.has_child,
+            words=set(self.child_metadata()),
+        )
     
     def run(self, result: ParseResult) -> int:
-        print("i am runninge")
-        return self.bootstrap()
+        self.bootstrap()
+        return 0

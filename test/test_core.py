@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 import shipyard.core as core
 from shipyard.core import Command, build_context, build_core_flag, command_help, execute, load_command
+from shipyard.error import CommandLoadError
 from shipyard.parser import create_parser
 from shipyard.types import GrammarRegistry, ParseResult, RegistryData
 
@@ -13,12 +16,6 @@ class LeafCommand(Command):
 
     def grammar(self):
         return GrammarRegistry(flags={"force"})
-
-    def get_child(self, name):
-        raise AssertionError("leaf commands do not have children")
-
-    def child_metadata(self):
-        return {}
 
     def run(self, result):
         self.result = result
@@ -49,18 +46,16 @@ class RootCommand(Command):
 
 
 class RegistryProbe(Command):
+    def __init__(self, root_ctx, name=None, child_path=None):
+        super().__init__(root_ctx, name)
+        self._metadata = RegistryData("probe", "", "", child_path=child_path)
+
     @property
     def metadata(self):
-        return RegistryData("probe", "", "")
+        return self._metadata
 
     def grammar(self):
         return GrammarRegistry()
-
-    def get_child(self, name):
-        raise KeyError(name)
-
-    def child_metadata(self):
-        return {}
 
     def run(self, result):
         return 0
@@ -73,6 +68,15 @@ def test_execute_routes_once_then_runs_the_resolved_child():
 
     assert code == 7
     assert child.result.flags == {"force"}
+
+
+def test_leaf_commands_inherit_the_empty_child_registry():
+    command = LeafCommand({}, "leaf")
+
+    assert command.child_metadata() == {}
+
+    with pytest.raises(CommandLoadError, match="unknown command 'missing'"):
+        command.get_child("missing")
 
 
 def test_build_core_flag_collects_only_recognized_root_flags():
@@ -111,6 +115,23 @@ def test_command_registry_discovers_valid_metadata_and_keeps_going_after_errors(
     assert errors[0].command == "broken"
 
 
+def test_command_uses_default_child_discovery_and_caches_the_registry(tmp_path):
+    child = tmp_path / "child"
+    child.mkdir()
+    (child / "metadata.py").write_text(
+        "from shipyard.types import RegistryData\n"
+        "METADATA = RegistryData('child', 'Child command', 'help')\n",
+        encoding="utf-8",
+    )
+    command = RegistryProbe({}, child_path=tmp_path)
+
+    first = command.child_metadata()
+    second = command.child_metadata()
+
+    assert set(first) == {"child"}
+    assert second is first
+
+
 def test_load_command_instantiates_a_declared_command_class(tmp_path):
     module_path = tmp_path / "command.py"
     module_path.write_text(
@@ -120,8 +141,6 @@ def test_load_command_instantiates_a_declared_command_class(tmp_path):
         "    @property\n"
         "    def metadata(self): return RegistryData('temp', '', '')\n"
         "    def grammar(self): return GrammarRegistry()\n"
-        "    def get_child(self, name): raise KeyError(name)\n"
-        "    def child_metadata(self): return {}\n"
         "    def run(self, result): return 0\n",
         encoding="utf-8",
     )

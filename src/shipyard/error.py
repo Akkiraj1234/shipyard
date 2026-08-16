@@ -85,7 +85,7 @@ class ShipyardParserError(UsageError):
     def _command_line(self) -> str:
         parts: list[str] = []
         pointer: list[str] = []
-        for index, token in enumerate(self.stream.items):
+        for index, token in enumerate(self.stream.original):
             name = token["name"]
             value = token["value"]
             if token["type"] is TokenType.option:

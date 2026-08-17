@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+<style>
+.box{fill:#f7f7f7;stroke:#333;stroke-width:2;rx:12}
+.blue{fill:#eef5ff;stroke:#355c9a;stroke-width:2;rx:12}
+.red{fill:#fff3ef;stroke:#a84b31;stroke-width:2;rx:12}
+.t{font:16px sans-serif;fill:#222}.h{font:700 20px sans-serif;fill:#222}.s{font:14px sans-serif;fill:#444}.title{font:700 28px sans-serif;fill:#222}
+.line{stroke:#333;stroke-width:2.4;fill:none;marker-end:url(#a)}.dash{stroke-dasharray:8 7}
+</style>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0L0,6L9,3z" fill="#333"/></marker></defs>
+<text x="800" y="38" text-anchor="middle" class="title">Shipyard Architecture — v0.1.x Direction</text>
+
+<rect x="50" y="80" width="220" height="80" class="box"/><text x="160" y="112" text-anchor="middle" class="h">__main__.py</text><text x="160" y="138" text-anchor="middle" class="t">sys.exit(main())</text>
+<rect x="320" y="80" width="250" height="80" class="box"/><text x="445" y="112" text-anchor="middle" class="h">cli.py</text><text x="445" y="138" text-anchor="middle" class="t">startup + exception boundary</text>
+<rect x="620" y="70" width="290" height="100" class="blue"/><text x="765" y="104" text-anchor="middle" class="h">ParserStream</text><text x="765" y="130" text-anchor="middle" class="t">TokenList + cursor</text><text x="765" y="151" text-anchor="middle" class="s">parse(GrammarRegistry) → ParseResult</text>
+<rect x="960" y="70" width="300" height="100" class="blue"/><text x="1110" y="104" text-anchor="middle" class="h">Command Runtime</text><text x="1110" y="130" text-anchor="middle" class="t">execute() / Command</text><text x="1110" y="151" text-anchor="middle" class="s">resolve → load → descend → execute</text>
+<rect x="1310" y="70" width="240" height="100" class="blue"/><text x="1430" y="104" text-anchor="middle" class="h">ShipyardCommand</text><text x="1430" y="130" text-anchor="middle" class="t">root scope</text><text x="1430" y="151" text-anchor="middle" class="s">commands/</text>
+<path d="M270 120H320M570 120H620M910 120H960M1260 120H1310" class="line"/>
+
+<rect x="620" y="220" width="290" height="105" class="box"/><text x="765" y="253" text-anchor="middle" class="h">Tokenizer</text><text x="765" y="280" text-anchor="middle" class="t">argv → word / option / flag</text><text x="765" y="303" text-anchor="middle" class="s">types.TokenType / Token</text>
+<rect x="960" y="220" width="300" height="105" class="box"/><text x="1110" y="253" text-anchor="middle" class="h">GrammarRegistry</text><text x="1110" y="280" text-anchor="middle" class="t">has_child / words / options / flags</text><text x="1110" y="303" text-anchor="middle" class="s">declared by Command</text>
+<rect x="1310" y="220" width="240" height="105" class="box"/><text x="1430" y="253" text-anchor="middle" class="h">RegistryData</text><text x="1430" y="280" text-anchor="middle" class="t">identity + paths</text><text x="1430" y="303" text-anchor="middle" class="s">entry_class / child_path</text>
+<path d="M765 170V220M1110 170V220M1430 170V220" class="line"/>
+
+<rect x="930" y="375" width="370" height="115" class="blue"/><text x="1115" y="410" text-anchor="middle" class="h">Command Discovery</text><text x="1115" y="438" text-anchor="middle" class="t">metadata.py → RegistryData → registry</text><text x="1115" y="463" text-anchor="middle" class="s">child_metadata() discovers + caches</text>
+<rect x="1330" y="375" width="230" height="115" class="blue"/><text x="1445" y="410" text-anchor="middle" class="h">Lazy Loading</text><text x="1445" y="438" text-anchor="middle" class="t">entry_class</text><text x="1445" y="463" text-anchor="middle" class="s">→ Command instance</text>
+<path d="M1110 325V375M1430 325V375M1300 432H1330" class="line"/>
+
+<rect x="730" y="535" width="830" height="120" class="blue"/><text x="1145" y="570" text-anchor="middle" class="h">Hierarchical Command Resolution</text><text x="1145" y="598" text-anchor="middle" class="t">ShipyardCommand → child → child → terminal Command</text><text x="1145" y="623" text-anchor="middle" class="s">same ParserStream is reused; terminal command consumes remaining input</text>
+<path d="M1445 490V535" class="line"/>
+
+<rect x="60" y="375" width="300" height="115" class="box"/><text x="210" y="410" text-anchor="middle" class="h">config.py</text><text x="210" y="438" text-anchor="middle" class="t">load_config()</text><text x="210" y="463" text-anchor="middle" class="s">shipyard.toml → (root_path, config)</text>
+<rect x="390" y="375" width="280" height="115" class="box"/><text x="530" y="410" text-anchor="middle" class="h">bootstrap()</text><text x="530" y="438" text-anchor="middle" class="t">command context</text><text x="530" y="463" text-anchor="middle" class="s">loads project config when needed</text>
+<path d="M360 432H390M670 432H730" class="line dash"/>
+
+<rect x="730" y="700" width="320" height="120" class="blue"/><text x="890" y="735" text-anchor="middle" class="h">deco_run() [@final]</text><text x="890" y="763" text-anchor="middle" class="t">help → command_help()</text><text x="890" y="787" text-anchor="middle" class="t">else → command.run()</text><text x="890" y="807" text-anchor="middle" class="s">result → print_output()</text>
+<rect x="1090" y="700" width="350" height="120" class="blue"/><text x="1265" y="735" text-anchor="middle" class="h">OutputFormatter</text><text x="1265" y="763" text-anchor="middle" class="t">format(data) → human text</text><text x="1265" y="787" text-anchor="middle" class="t">json(data) → JSON</text><text x="1265" y="807" text-anchor="middle" class="s">Blessed / no-color direction</text>
+<path d="M1145 655V700M1050 760H1090" class="line"/>
+
+<rect x="60" y="560" width="300" height="135" class="red"/><text x="210" y="595" text-anchor="middle" class="h">error.py</text><text x="210" y="623" text-anchor="middle" class="t">ShipyardError hierarchy</text><text x="210" y="648" text-anchor="middle" class="t">parser / registry / config</text><text x="210" y="673" text-anchor="middle" class="s">CLI rendering is still being refined</text>
+<rect x="390" y="560" width="280" height="135" class="box"/><text x="530" y="595" text-anchor="middle" class="h">CLI error path</text><text x="530" y="623" text-anchor="middle" class="t">except Exception</text><text x="530" y="648" text-anchor="middle" class="t">→ shipyard_error_print()</text><text x="530" y="673" text-anchor="middle" class="s">finally → cleanup()</text>
+<path d="M390 625H360" class="line"/>
+
+<rect x="60" y="750" width="300" height="125" class="box"/><text x="210" y="785" text-anchor="middle" class="h">utils.py</text><text x="210" y="813" text-anchor="middle" class="t">ListStream / atomic I/O</text><text x="210" y="837" text-anchor="middle" class="t">merge / safe_open / imports</text><text x="210" y="860" text-anchor="middle" class="s">shared infrastructure</text>
+<rect x="390" y="750" width="280" height="125" class="box"/><text x="530" y="785" text-anchor="middle" class="h">types.py</text><text x="530" y="813" text-anchor="middle" class="t">Token / ParseResult</text><text x="530" y="837" text-anchor="middle" class="t">GrammarRegistry / RegistryData</text><text x="530" y="860" text-anchor="middle" class="s">shared contracts</text>
+
+<path d="M670 815H360" class="line dash"/>
+<path d="M670 840H670" class="line dash"/>
+<text x="800" y="940" class="h">Runtime flow</text>
+<text x="800" y="970" class="t">argv → tokenize → ParserStream → grammar → child lookup → load command → terminal run → result → output</text>
+<text x="800" y="1000" class="t">error path: exception → cli boundary → error renderer → cleanup → exit code</text>
+<text x="800" y="1040" class="s">Not shown as final: global/shared config instance, semantic style registry, plugin registry, final error/output contracts.</text>
+</svg>

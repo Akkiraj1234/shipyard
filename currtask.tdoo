@@ -1,63 +1,53 @@
-# create_parser
-create the parser and parser object and take input follow ADR-0001
+# TASK : aug 16
+
+- [x] create the parser and parser object and take input follow ADR-0001
 - [x] make sure child is mandotory
 - [x] make everyone resepct the new ADR-0001
-    - cli.py
-    - config.py
-    - core.py
-    - error.py
-    - parser.py
-    - shipyard.py
-    - types.py
-    - utils.py
-    - `__init__.py`
-    - `__main__.py`
-    - `__version__.py`
-
-# build_core_flag
-build the core flag
 - [x] remove flags from parser
 - [x] edit liststream to add remove list of item function
 - [x] remove it from actual list wihout breaking the list to print info
-
-# ShipyardCommand
 - [x] handle its domain of commands
 - [x] write run comamnd
-
-# execute
 - [x] check if execute follow adr-0001
-
-
-# error.py
-
-- [ ] better error system and prinintg
-- [ ] Commands return integer exit statuses. 
-- [ ] error have interger exit status code
-- [ ] Propagate explicit command return codes.
-- [ ] document Define standard CLI exit-code constants. 
-- [ ] check if all raise meningfull error and its handle properly in all place
-
-# cleanup
-
-# other
 - [x] make help take command as argument to pass help infomation
 - [x] support version, help, dev, no-color, only-json, dev-traceback
 - [x] write `command_help` function
-- [-] write `cleanup` function
-- [ ] make sure run and return has function where it can be in way where it can return value and item in dict and as reuqtested
-- [x] think how ctx and core_flags should be handled
+- [x] make sure run and return has function where it can be in way where it can return value and item in dict and as reuqtested
+
 - [x] besdies verstion what otehr function should shipyard main have to handle
 
+-------------------
 
-* [/] Design and implement the help system.
+# TASK : aug 18
+
+- [ ] global config once its loaded 
+- [ ] config creation by priority: [toml_file] -> [root_ctx] -> [default]
+- [ ] make sure to do cleanup in config gloabl if file changed save it
+- [ ] think how ctx and core_flags should be handled
+      - Replace `ctx` dependency injection with a globally accessible root context,
+        initialized during application startup so it can be accessed throughout
+        the command hierarchy.
+      - make level wise where it can have root_ctx and config_ctx and default
+      - and get_flag function to return flag data either true or false
+      - and get function to return data (Any) or None if not insialized
+
+- [ ] make output.py have colors option and configuration option and also it 
+      also good function to print files
+
+- [ ] error has better value to return by using output.py and colors system
+- [ ] Commands return integer exit statuses and error return too. 
+- [ ] document Define standard CLI exit-code constants. 
+- [ ] check if all raise meningfull error and its handle properly in all place
+
+-------------------
+
+# TASK : functure
+
+- [ ] update all 4 adr and guide with codex once again
+- [ ] update test
+- [ ] Design and implement the help system.
 
   * Generate help from command metadata and docstrings.
   * Support help for the current command scope.
   * Support child-command discovery.
   * Provide useful suggestions for unknown commands.
-
-
-# for v2.0
-1. Replace `ctx` dependency injection with a globally accessible root context,
-   initialized during application startup so it can be accessed throughout
-   the command hierarchy.

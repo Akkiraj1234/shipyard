@@ -21,8 +21,9 @@
 # TASK : aug 18
 
 - [ ] global config once its loaded 
-- [ ] config creation by priority: [toml_file] -> [root_ctx] -> [default]
+- [ ] config creation by priority: [root_ctx] -> [toml_file] -> [default]
 - [ ] make sure to do cleanup in config gloabl if file changed save it
+
 - [ ] think how ctx and core_flags should be handled
       - Replace `ctx` dependency injection with a globally accessible root context,
         initialized during application startup so it can be accessed throughout
@@ -38,6 +39,12 @@
 - [ ] Commands return integer exit statuses and error return too. 
 - [ ] document Define standard CLI exit-code constants. 
 - [ ] check if all raise meningfull error and its handle properly in all place
+      - [ ] every public failure has a ShipyardError
+      - [ ] parser failures identify input/token
+      - [ ] config failures identify project/config path
+      - [ ] command loading failures identify command
+      - [ ] unexpected exceptions remain fatal/internal
+      - [ ] all errors reach the CLI boundary
 
 -------------------
 

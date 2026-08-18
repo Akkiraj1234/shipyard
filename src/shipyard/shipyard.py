@@ -64,9 +64,10 @@ class ShipyardCommand(Command):
         Bootstraps the project context and combines it with the root CLI context
         before handling flags supported directly by Shipyard.
         """
-        ctx = self.bootstrap()
-        
         if "version" in result.flags:
             return {"version": __version__}
+        
+        # ctx = self.bootstrap()
+        
         
         

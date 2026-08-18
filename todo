@@ -100,13 +100,13 @@
   * Test behavior at the level where it is owned.
   * Avoid duplicating inherited behavior across child commands.
 
-* [/] Finalize command child-routing semantics.
+* [x] Finalize command child-routing semantics.
 
   * changes types to have has_child and make it mandorty to have
   * make everyone resepct the new ADR-0001
   * Child commands should not duplicate root-level parsing responsibilities.
 
-* [/] Finalize global/core flag handling.
+* [x] Finalize global/core flag handling.
 
   * Establish one authoritative definition for global flags.
   * Support `--version`.
@@ -138,7 +138,7 @@
 
 * [/] Implement exit-code mapping for Shipyard errors.
 
-* [/] Finalize `--version`.
+* [x] Finalize `--version`.
 
   * Print the Shipyard version.
   * Do not require project configuration when only version information is requested.

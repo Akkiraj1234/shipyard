@@ -39,10 +39,17 @@ class _Skip:
 
     def __repr__(self) -> str:
         return "SKIP"
+    
+class _Null:
+    
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "NULL"
 
 
 SKIP = _Skip()
-
+NULL = _Null()
 
 
 class ListStream:

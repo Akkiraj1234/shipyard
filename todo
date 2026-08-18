@@ -117,6 +117,19 @@
   * Support the planned developer traceback flag.
   * Handle global flags at the appropriate command layer.
 
+* [x] Finalize project-path discovery required by the foundation.
+
+  * Resolve the current project root.
+  * Resolve paths relative to the project root.
+  * Establish the path model required by later project commands.
+
+* [x] Finalize `--version`.
+
+  * Print the Shipyard version.
+  * Do not require project configuration when only version information is requested.
+
+* [x] Finalize command-specific metadata/help behavior.
+
 * [/] Finalize command execution and exit-status handling.
 
   * Commands return integer exit statuses.
@@ -138,11 +151,6 @@
 
 * [/] Implement exit-code mapping for Shipyard errors.
 
-* [x] Finalize `--version`.
-
-  * Print the Shipyard version.
-  * Do not require project configuration when only version information is requested.
-
 * [/] Design and implement the help system.
 
   * Generate help from command metadata and docstrings.
@@ -156,7 +164,7 @@
   * Keep normal user-facing errors concise.
   * Show detailed traceback information only when explicitly requested.
 
-* [ ] Implement the output/printer interface.
+* [/] Implement the output/printer interface.
 
   * Centralize terminal output.
   * Support normal output.
@@ -165,19 +173,11 @@
   * Prepare for colors and formatting.
   * Avoid direct terminal output from command implementations.
 
-* [/] Finalize project-path discovery required by the foundation.
-
-  * Resolve the current project root.
-  * Resolve paths relative to the project root.
-  * Establish the path model required by later project commands.
-
 * [ ] Add command aliases.
 
   * Define alias metadata.
   * Resolve aliases during command lookup.
   * Detect alias conflicts.
-
-* [ ] Finalize command-specific metadata/help behavior.
 
 * [ ] Complete remaining generic file utilities required by the foundation.
 
@@ -197,6 +197,12 @@
   * Error rendering.
   * Developer traceback behavior.
 
+---
+
+## [SHP-001] Initialize a Shipyard Project
+
+> **Goal:** Turn an existing directory into a Shipyard-managed project and establish the project's `.shipyard` structure and managed files.
+
 * [-] Implement feature ID generation and version management as part of SHP-000.
 
   * Moved to later project/release management work.
@@ -208,12 +214,6 @@
 * [-] Implement `.shipyard` project management as part of SHP-000.
 
   * Moved to SHP-001.
-
----
-
-## [SHP-001] Initialize a Shipyard Project
-
-> **Goal:** Turn an existing directory into a Shipyard-managed project and establish the project's `.shipyard` structure and managed files.
 
 * [ ] Implement the `shipyard init` command.
 

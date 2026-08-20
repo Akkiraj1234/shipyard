@@ -179,8 +179,23 @@ class Config:
 
     Only the Config instance may mutate persisted configuration state.
     """
+    __instance: Config | None = None
+    __slots__ = (
+        "_root_ctx",
+        "_toml_ctx",
+        "_default",
+        "_dir_path",
+        "_dirty",
+    )
     
-    def __init__(self):
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            cls.__instance.__initialize_state()
+            
+        return cls.__instance
+    
+    def __initialize_state(self):
         """
         inisialize the config class
         """
@@ -196,7 +211,7 @@ class Config:
         """
         Return whether toml configuration has insialized
         """
-        return bool(self._toml_ctx)
+        return self._toml_ctx is not None
 
     @property
     def dirty(self) -> bool:
@@ -260,33 +275,52 @@ class Config:
 
         return changed
     
+    def _parse_key(name: str) -> list[str]:
+        if not name or any(not part for part in name.split(".")):
+            raise ValueError(f"invalid configuration key: {name!r}")
+
+        return name.split(".")
+    
     def initialize(
         self,
         *,
         root_ctx: dict[str, Any] | None = None,
         toml_ctx: dict[str, Any] | None = None,
-        dir_path: Path | None = None
+        dir_path: Path | None = None,
     ) -> None:
         """
-        Initialize the runtime configuration sources once.
+        Initialize configuration sources that have been provided.
+
+        ``None`` values are ignored. Each configuration source may only be
+        initialized once.
         """
-        if isinstance(root_ctx, dict):
-            if self.root_ctx is not None:
-                raise RuntimeError("cant set root_ctx already insialize")
-            
-            self.root_ctx = deepcopy(root_ctx)
-            
-        if isinstance(toml_ctx, dict):
-            if self.toml_ctx is not None:
-                raise RuntimeError("cant set toml_ctx already insialize")
-            
-            self.toml_ctx = deepcopy(toml_ctx)
-        
-        if isinstance(dir_path, Path):
+
+        if root_ctx is not None:
+            if not isinstance(root_ctx, dict):
+                raise TypeError("root_ctx must be a dict")
+
+            if self._root_ctx is not None:
+                raise RuntimeError("root_ctx is already initialized")
+
+            self._root_ctx = deepcopy(root_ctx)
+
+        if toml_ctx is not None:
+            if not isinstance(toml_ctx, dict):
+                raise TypeError("toml_ctx must be a dict")
+
+            if self._toml_ctx is not None:
+                raise RuntimeError("toml_ctx is already initialized")
+
+            self._toml_ctx = deepcopy(toml_ctx)
+
+        if dir_path is not None:
+            if not isinstance(dir_path, Path):
+                raise TypeError("dir_path must be a Path")
+
             if self._dir_path is not None:
-                raise RuntimeError("cant set toml_ctx already insialize")
-            
-            self._dir_path = dir_path
+                raise RuntimeError("dir_path is already initialized")
+
+            self._dir_path = dir_path.resolve()
 
         self._dirty = False
     
@@ -299,9 +333,8 @@ class Config:
         ``config.get("project.name")``
 
         ``config.get("files.roadmap")``
-        """
-        
-        levels = name.split(".")
+        """    
+        levels = self._parse_key(name)
         data = self._get_data(levels[0])
 
         for level in levels[1:]:
@@ -333,7 +366,7 @@ class Config:
         if not self.initialized:
             raise RuntimeError("config is not initialized")
 
-        levels = name.split(".")
+        levels = self._parse_key(name)
         target = self._toml_ctx
 
         for level in levels[:-1]:
@@ -353,7 +386,7 @@ class Config:
         key = levels[-1]
 
         if target.get(key, NULL) != value:
-            target[key] = value
+            target[key] = deepcopy(value)
             self._dirty = True
     
     def update(self, values: dict[str, Any]) -> None:
@@ -387,18 +420,14 @@ class Config:
         if not isinstance(self._dir_path, Path) \
             and not self._dir_path.exists():
                 raise RuntimeError("config path is not saved well")
-            
-        root_path = self._dir_path 
-
-
+        
         save_config(
             self._toml_ctx,
-            self.root_path,
+            self._dir_path ,
         )
 
         self._dirty = False
-        
-
+    
     def root_context(self) -> dict[str, Any]:
         """
         Return a copy of the root context.

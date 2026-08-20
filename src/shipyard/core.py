@@ -2,9 +2,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, final
 from pathlib import Path
-import json
 
-from .config import load_config
+from .config import load_config, config, Config
 from .parser import ParserStream
 from .utils import error_to_warning, import_command_module
 from .error import CommandLoadError, RegistryError
@@ -19,7 +18,7 @@ from .types import (
 
 _CORE_ROOT_FLAGS = {
     "help",
-    "no-color",  # no color is not supported yet
+    "no-color",
     "only-json",
     "dev", 
     "dev-trackback" 
@@ -27,16 +26,18 @@ _CORE_ROOT_FLAGS = {
 
 
 
-def build_context() -> dict[str, Any]:
+def build_context() -> None:
     """
     context build currently has simple logic
     """
     root_path, data = load_config()
     
-    return {
-        **data,
-        "root_path": root_path
-    }
+    config.initialize(
+        toml_ctx = data,
+        dir_path = root_path
+    )
+    
+    return config
 
 
 class Command(ABC):
@@ -49,7 +50,7 @@ class Command(ABC):
     arguments themselves.
     """
 
-    def __init__(self, root_ctx, name: str | None = None) -> None:
+    def __init__(self, name: str | None = None) -> None:
         """
         Initialize a command with its root execution context.
 
@@ -61,7 +62,6 @@ class Command(ABC):
             Optional command name. When omitted, the class name is used.
         """
         
-        self.root_ctx = root_ctx
         self.command_name = name
         self._child_metadata: CommandRegistry | None = None
     
@@ -82,7 +82,7 @@ class Command(ABC):
         """
         ...
 
-    def bootstrap(self) -> dict[str, Any]:
+    def bootstrap(self) -> Config:
         """
         Build and initialize the command's execution context.
 
@@ -92,8 +92,8 @@ class Command(ABC):
             The context created for the command.
         """
         
-        self.ctx = build_context()
-        return self.ctx
+        config = build_context()
+        return config
     
     @abstractmethod
     def grammar(self) -> GrammarRegistry:
@@ -130,7 +130,7 @@ class Command(ABC):
         if metadata is None:
             raise CommandLoadError(f"unknown command '{name}'")
 
-        return load_command(self.root_ctx, metadata)
+        return load_command( metadata )
     
     def child_metadata(self) -> CommandRegistry:
         """
@@ -377,21 +377,19 @@ def execute(parser_stream: ParserStream, command: Command) -> int:
         return command.deco_run(result)
 
 
-def build_core_flag(parser: ParserStream) -> dict[str, bool]:
+def build_core_flag(parser: ParserStream) -> None:
     """
     Extract recognized root-level flags from the token stream.
 
-    Scans the parser's token list and returns a mapping of supported
-    core flags that were provided on the command line. Unknown flags
-    are ignored and left for later validation.
+    Recognized core flags are removed from the parser and added to the
+    runtime configuration under the ``settings`` section. Each detected
+    flag
+    is stored with a boolean value of ``True``.
 
-    Returns
-    -------
-    dict[str, bool]
-        A mapping of each detected core flag to ``True``.
+    Unknown flags are left untouched for later validation.
     """
-    
     result: dict[str, bool] = {}
+    
     flags = parser.remove_items(
         _CORE_ROOT_FLAGS,
         key = lambda token: token["name"]
@@ -400,12 +398,20 @@ def build_core_flag(parser: ParserStream) -> dict[str, bool]:
     for flag in flags:
         result[flag] = True
     
-    return result
+    config.initialize(
+        root_ctx = {"settings": result}
+    )
 
 
-def cleanup(command: Command, ctx: dict[str, Any]) -> None:
-    # no need right now
-    pass
+def cleanup(command: Command) -> None:
+    """
+    Persist any pending configuration changes.
+
+    This is the final configuration lifecycle step and delegates persistence
+    to ``Config.save()``. No action is taken when the configuration has not
+    been modified.
+    """
+    config.save()
 
 
 def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:

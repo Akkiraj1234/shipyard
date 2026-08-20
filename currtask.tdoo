@@ -20,8 +20,8 @@
 
 # TASK : aug 18
 
-- [ ] global config once its loaded 
-- [ ] config creation by priority: [root_ctx] -> [toml_file] -> [default]
+- [x] global config once its loaded 
+- [x] config creation by priority: [root_ctx] -> [toml_file] -> [default]
 - [ ] make sure to do cleanup in config gloabl if file changed save it
 
 - [ ] think how ctx and core_flags should be handled

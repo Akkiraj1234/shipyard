@@ -46,6 +46,8 @@ changelog = "CHANGELOG.md"
 
 [settings]
 auto_sync = false
+no-color = false
+only-json = false
 """
 
 RECURSIVE_CONFIG_SEARCH = 5
@@ -655,3 +657,6 @@ class Config:
             A copy of the default configuration.
         """
         return deepcopy(self._default)
+    
+    
+config: Config = Config()

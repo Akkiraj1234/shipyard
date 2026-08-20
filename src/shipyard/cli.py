@@ -17,17 +17,17 @@ def main() -> int:
     """
     
     stream = create_parser(sys.argv)
-    ctx = build_core_flag(stream)
-    command = ShipyardCommand(ctx)
+    build_core_flag(stream)
+    command = ShipyardCommand()
     
     try: 
         return execute(stream, command)
     
     except Exception as error:
-        return shipyard_error_print(error, ctx)
+        return shipyard_error_print(error)
     
     finally:
-        cleanup(command, ctx)
+        cleanup(command)
 
 
 if __name__ == "__main__":

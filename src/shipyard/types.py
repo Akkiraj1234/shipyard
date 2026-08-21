@@ -137,3 +137,4 @@ class ParseResult:
 
 CommandRegistry = dict[str, RegistryData]
 """A mapping of child-command names to their discovered metadata."""
+

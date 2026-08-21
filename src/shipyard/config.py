@@ -96,7 +96,8 @@ def load_config(start: Path | None = None) -> tuple[Path, dict[str, Any]]:
                     f"could not parse configuration file '{config_path}': {exc}"
                 ) from exc
             
-            config = merge_dicts(DEFAULT_CONFIG, config)
+            # no need to do now its handle by Config class
+            # config = merge_dicts(DEFAULT_CONFIG, config)
             
             return current, config
             
@@ -591,25 +592,26 @@ class Config:
     
     def save(self) -> None:
         """
-        Persist the current TOML configuration to ``shipyard.toml``.
+        Persist pending TOML configuration changes to ``shipyard.toml``.
 
-        Nothing is written when the configuration is clean. When changes are
-        pending, the configured project root is passed to ``save_config()``
-        for serialization and atomic persistence.
+        If project configuration has not been initialized, or if no changes are
+        pending, no action is taken. When the configuration is initialized and
+        marked dirty, the current TOML context is written atomically to the
+        configured project directory.
 
-        After a successful save, the dirty state is cleared.
+        The dirty state is cleared only after a successful save.
 
-        Raises:
-            RuntimeError: If TOML configuration has not been initialized or
-                the project directory has not been configured.
-            ShipYardConfigNotFoundError: If ``shipyard.toml`` does not exist.
-            ShipyardFileError: If the configuration cannot be serialized or
-                written.
+        Raises
+        ------
+        RuntimeError
+            If the project configuration is marked as initialized but its
+            project directory is not available.
+        ShipYardConfigNotFoundError
+            If the project configuration file does not exist when saving.
+        ShipyardFileError
+            If the configuration cannot be serialized or written.
         """
-        if not self.initialized:
-            raise RuntimeError("config is not initialized")
-
-        if not self._dirty:
+        if not self.initialized or not self._dirty:
             return
 
         if self._dir_path is None:

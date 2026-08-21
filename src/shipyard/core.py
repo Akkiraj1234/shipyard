@@ -26,17 +26,24 @@ _CORE_ROOT_FLAGS = {
 
 
 
-def build_context() -> None:
+def build_context() -> Config:
     """
-    context build currently has simple logic
+    Initialize and return the shared project configuration.
+
+    Project configuration is loaded lazily when a command requires it.
+    If the shared configuration has already been initialized, the existing
+    instance is returned unchanged.
     """
+    if config.initialized:
+        return config
+
     root_path, data = load_config()
-    
+
     config.initialize(
         toml_ctx = data,
-        dir_path = root_path
+        dir_path = root_path,
     )
-    
+
     return config
 
 
@@ -52,14 +59,13 @@ class Command(ABC):
 
     def __init__(self, name: str | None = None) -> None:
         """
-        Initialize a command with its root execution context.
+        Initialize a command.
 
         Parameters
         ----------
-        root_ctx
-            Context shared across the command hierarchy.
         name
-            Optional command name. When omitted, the class name is used.
+            Optional registered command name. When omitted, the class name
+            is used.
         """
         
         self.command_name = name
@@ -84,12 +90,12 @@ class Command(ABC):
 
     def bootstrap(self) -> Config:
         """
-        Build and initialize the command's execution context.
+        Initialize project configuration for the current command.
 
         Returns
         -------
-        dict[str, Any]
-            The context created for the command.
+        Config
+            The shared runtime configuration instance.
         """
         
         config = build_context()
@@ -157,9 +163,9 @@ class Command(ABC):
         return self._child_metadata
     
     @abstractmethod
-    def run(self, result: ParseResult) -> int:
+    def run(self, result: ParseResult) -> str | dict[str, Any]:
         """
-        Execute the command using the parsed input.
+        Execute the command and return its result.
 
         Parameters
         ----------
@@ -168,8 +174,8 @@ class Command(ABC):
 
         Returns
         -------
-        int
-            Process exit status returned by the command.
+        str | dict[str, Any]
+            Command result consumed by Shipyard's output layer.
         """
         ...
     
@@ -226,7 +232,8 @@ class Command(ABC):
         return set(command_registry.keys())
     
     def __import_metadata(self, metadata_file: Path, registry: CommandRegistry) -> RegistryData:
-        """Load, validate, and resolve command metadata.
+        """
+        Load, validate, and resolve command metadata.
 
         Imports the ``METADATA`` object from a command's ``metadata.py``,
         validates its registry definition, and resolves filesystem paths
@@ -323,27 +330,36 @@ class Command(ABC):
     @final
     def deco_run(self, parser_stream: ParserStream) -> int:
         """
-        Execute the command through Shipyard's common runtime layer.
+        Execute a resolved command through Shipyard's common runtime pipeline.
+
+        Handles framework-level behavior such as help, invokes the command's
+        ``run()`` method, and passes the returned result to the output layer.
+
+        Returns
+        -------
+        int
+            Process exit status for successful command execution.
         """
-        if "help" in self.root_ctx:
+        if config.get_flag("settings.help"):
             value = command_help(self)
             
-        else:
+        else: 
             value = self.run(parser_stream)
 
-        print_output(value, self.root_ctx)
+        print_output(value)
         return 0
 
 
-def print_output(data: object, ctx: dict) -> None:
+def print_output(data: object) -> None:
     """
-    Format and print command output according to the execution context.
-    """
-    formatter = OutputFormatter(
-        no_color="no-color" in ctx,
-    )
+    Format and print a command result according to the active output mode.
 
-    if "only-json" in ctx:
+    JSON output is selected through the shared runtime configuration;
+    otherwise the human-readable formatter is used.
+    """
+    formatter = OutputFormatter()
+    
+    if config.get("settings.only-json"):
         output = formatter.json(data)
     else:
         output = formatter.format(data)
@@ -405,16 +421,15 @@ def build_core_flag(parser: ParserStream) -> None:
 
 def cleanup(command: Command) -> None:
     """
-    Persist any pending configuration changes.
+    Persist pending project configuration changes.
 
-    This is the final configuration lifecycle step and delegates persistence
-    to ``Config.save()``. No action is taken when the configuration has not
-    been modified.
+    ``Config.save()`` safely does nothing when project configuration has not
+    been initialized or when no changes are pending.
     """
     config.save()
 
 
-def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:
+def load_command(metadata: RegistryData) -> Command:
     """
     Instantiate a command implementation declared by registry metadata.
     follow ADR-0002
@@ -426,7 +441,6 @@ def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:
     module_file, separator, attribute = metadata.entry_class.rpartition(":")
     if not separator:
         raise CommandLoadError(f"invalid entry_class for '{metadata.name}'")
-    
 
     try:
         module = import_command_module(
@@ -448,7 +462,7 @@ def load_command(root_ctx: dict[str, bool], metadata: RegistryData) -> Command:
         ) from exc
     
     if isinstance(entry, type) and issubclass(entry, Command):
-        return entry(root_ctx, metadata.name)
+        return entry(metadata.name)
     
     raise CommandLoadError(
         f"entry_class for '{metadata.name}' must resolve to a Command subclass"

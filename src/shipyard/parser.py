@@ -114,7 +114,6 @@ def tokenize(argv: list[str]) -> TokenList:
     return token
 
 
-
 class ParserStream(ListStream):
     """
     A cursor over normalized command-line tokens.

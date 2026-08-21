@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from typing import Any
 
 from .__version__ import __version__
 from .core import Command
@@ -34,8 +35,8 @@ class ShipyardCommand(Command):
     
     CORE_FLAGS = {"version"}
     
-    def __init__(self, root_ctx: dict[str, bool]) -> None:
-        super().__init__(root_ctx, SHIPYARD_METADATA.name)
+    def __init__(self) -> None:
+        super().__init__(SHIPYARD_METADATA.name)
         
     @property
     def metadata(self) -> RegistryData:
@@ -57,12 +58,12 @@ class ShipyardCommand(Command):
             flags = ShipyardCommand.CORE_FLAGS
         )
     
-    def run(self, result: ParseResult) -> int:
+    def run(self, result: ParseResult) -> str | dict[str, Any]:
         """
-        Execute the resolved Shipyard root command.
+        Execute the Shipyard root command.
 
-        Bootstraps the project context and combines it with the root CLI context
-        before handling flags supported directly by Shipyard.
+        Handles commands that belong directly to the Shipyard root. Project
+        configuration is only bootstrapped when the root command requires it.
         """
         if "version" in result.flags:
             return {"version": __version__}

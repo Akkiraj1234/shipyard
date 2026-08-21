@@ -22,9 +22,9 @@
 
 - [x] global config once its loaded 
 - [x] config creation by priority: [root_ctx] -> [toml_file] -> [default]
-- [ ] make sure to do cleanup in config gloabl if file changed save it
+- [x] make sure to do cleanup in config gloabl if file changed save it
 
-- [ ] think how ctx and core_flags should be handled
+- [x] think how ctx and core_flags should be handled
       - Replace `ctx` dependency injection with a globally accessible root context,
         initialized during application startup so it can be accessed throughout
         the command hierarchy.

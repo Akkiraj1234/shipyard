@@ -39,9 +39,18 @@ class _Skip:
 
     def __repr__(self) -> str:
         return "SKIP"
-    
+
+
 class _Null:
-    
+    """
+    Sentinel used to explicitly represent the absence of a value.
+
+    ``NULL`` is used instead of ``None`` so that an absent value can be
+    distinguished from ``None`` when ``None`` is a valid value.
+
+    The sentinel is compared by identity using ``is``.
+    """
+
     __slots__ = ()
 
     def __repr__(self) -> str:
@@ -265,6 +274,40 @@ class ListStream:
         return self.__str__()
 
 
+class DictBacked:
+    """
+    Base class for objects whose attributes are backed by a dictionary.
+
+    Dictionary keys are exposed as object attributes, allowing values to be
+    accessed directly using attribute notation. The underlying dictionary can
+    be replaced or updated at any time using :meth:`update`.
+
+    Args:
+        data: Dictionary containing attribute names and their corresponding
+            values.
+    """
+    def __init__(self, data: dict[str, str]) -> None:
+        self.data = data
+        self.update()
+
+    def update(self, data: dict[str, str] | None = None) -> None:
+        """
+        Update the attributes from the backing dictionary.
+
+        If ``data`` is provided, it replaces the current backing dictionary
+        before the attributes are updated. Existing attributes are overwritten
+        when their corresponding keys are present in the dictionary.
+
+        Args:
+            data: Optional dictionary to use as the new backing data.
+        """
+        if data is not None:
+            self.data = data
+
+        for key, value in self.data.items():
+            setattr(self, key, value)
+
+
 def atomic_write(
     path: Path | str, 
     data: str, 
@@ -433,8 +476,9 @@ def error_to_warning(error_list: list[Exception]) -> None:
 
 
 def load_module(module: str | Path | Command) -> ModuleType | Command:
-    """Load a Python module by dotted name or file path.
-
+    """
+    Load a Python module by dotted name or file path.
+    
     A ``Command`` instance is returned unchanged, which lets callers accept
     either an already-created command or a module containing one.  File paths
     must point to a Python source file; import errors raised by the module are

@@ -136,7 +136,7 @@ class Command(ABC):
         if metadata is None:
             raise CommandLoadError(f"unknown command '{name}'")
 
-        return load_command( metadata )
+        return load_command(metadata)
     
     def child_metadata(self) -> CommandRegistry:
         """

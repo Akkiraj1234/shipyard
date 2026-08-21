@@ -2,6 +2,92 @@ from blessed import Terminal
 from typing import Any
 import json
 
+from .utils import DictBacked
+from .config import config
+
+
+class Colors(DictBacked):
+    """
+    Concrete terminal colors available to Shipyard's output system.
+
+    Colors represent visual values rather than semantic meanings. Semantic
+    output styles defined by :class:`Style` can use these colors to determine
+    how different types of terminal output are displayed.
+    """
+    
+    def __init__(self) -> None:
+        term = Terminal()
+
+        data = {
+            "black": term.black,
+            "red": term.red,
+            "green": term.green,
+            "yellow": term.yellow,
+            "blue": term.blue,
+            "magenta": term.magenta,
+            "cyan": term.cyan,
+            "white": term.white,
+
+            "bright_black": term.bright_black,
+            "bright_red": term.bright_red,
+            "bright_green": term.bright_green,
+            "bright_yellow": term.bright_yellow,
+            "bright_blue": term.bright_blue,
+            "bright_magenta": term.bright_magenta,
+            "bright_cyan": term.bright_cyan,
+            "bright_white": term.bright_white,
+        }
+        super().__init__(data)
+
+
+class Style(DictBacked):
+    """
+    Semantic terminal styles used by Shipyard for formatted output.
+
+    Each style represents the purpose of the output rather than a specific
+    color. The default styles provide a consistent visual language for
+    Shipyard and may be customized through configuration.
+
+    Styles include:
+
+    ``error``
+        Used for failures, invalid input, and unrecoverable errors.
+
+    ``success``
+        Used when an operation completes successfully.
+
+    ``warning``
+        Used for conditions that require attention but do not prevent
+        execution.
+
+    ``info``
+        Used for neutral informational messages and progress information.
+
+    ``key``
+        Used for names, identifiers, configuration keys, and other
+        emphasized labels.
+
+    ``value``
+        Used for values associated with keys or descriptive output.
+    """
+
+    def __init__(self, colors: Colors) -> None:
+        data = {
+            "error": colors.red,
+            "success": colors.green,
+            "warning": colors.yellow,
+            "info": colors.cyan,
+            "key": colors.cyan,
+            "value": colors.white,
+        }
+
+        super().__init__(data)
+
+
+style: Style = Style()
+color: Colors = Colors()
+reset = Terminal().normal
+
 
 
 class OutputFormatter:
@@ -9,10 +95,12 @@ class OutputFormatter:
     Format command results for human-readable or JSON output.
     """
 
-    def __init__(self, *, no_color: bool = False) -> None:
+    def __init__(self) -> None:
         self.term = Terminal()
-        self.no_color = no_color
-
+        self.no_color = config.get_flag(
+            "settings.no-color"
+        )
+    
     def format(self, data: Any) -> str:
         """
         Format command data as human-readable text.

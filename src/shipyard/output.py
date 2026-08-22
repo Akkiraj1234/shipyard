@@ -1,4 +1,4 @@
-from typing import Any, Callable, TextIO
+from typing import Any, Callable, TextIO, TYPE_CHECKING
 from dataclasses import dataclass
 from enum import StrEnum
 import json
@@ -6,6 +6,7 @@ import sys
 
 from blessed import Terminal
 from .config import config
+from .utils  import error_to_warning
 
 
 
@@ -61,43 +62,49 @@ _styles: dict[Style, StyleFunction] = {
 }
 
 
-@dataclass(frozen=True, slots=True)
-class Styled:
-    """
-    Text explicitly associated with a semantic terminal style.
-    """
+def _get_formatter(color: str) -> Callable | None:
+    if color.startswith("#"):
+        try:
+            value = term.color_hex(color)
+        except Exception:
+            value = None
+        
+    
+    
+    value = getattr(term, color, None)
 
-    text: str
-    style: Style
-
-
-
-def styled(text: str, style: Style) -> Styled:
-    """
-    Create styled terminal output data.
-    """
-    return Styled(text, style)
-
+    if value is not Callable:
+        value = None
+        
+    return value
 
 def update_styles(colors: dict[str, str]) -> None:
     """
     Update semantic styles from configured color names.
 
-    Unknown style names are ignored. Invalid terminal colors raise
-    ``ValueError``.
+    Args:
+        colors (dict[str, str]): _description_
     """
+    errors = []
     for name, color in colors.items():
-        try:
-            semantic_style = Style(name)
-        except ValueError:
+        
+        if name not in _styles:
+            errors.append(
+                ValueError(f"name: '{name}` is not a valid style")
+            )
             continue
-
-        formatter = getattr(term, color, None)
-
-        if formatter is None or not callable(formatter):
-            raise ValueError(f"unknown terminal color: {color!r}")
-
-        _styles[semantic_style] = formatter
+        
+        formatter = _get_formatter(color: str)
+        
+        if formatter is None:
+            errors.append(
+                ValueError(f"unknown terminal color: {color!r}")
+            )
+            continue
+        
+        _styles[name] = formatter
+        
+    error_to_warning(errors)
 
 
 def apply_style(value: str, style: Style) -> str:
@@ -180,7 +187,22 @@ def _format_mapping_item(
         f"{indent}{key_text}: "
         f"{apply_style(str(value), Style.VALUE)}"
     ]
+@dataclass(frozen=True, slots=True)
+class Styled:
+    """
+    Text explicitly associated with a semantic terminal style.
+    """
 
+    text: str
+    style: Style
+
+
+
+def styled(text: str, style: Style) -> Styled:
+    """
+    Create styled terminal output data.
+    """
+    return Styled(text, style)
 
 def print_output(
     data: Any,

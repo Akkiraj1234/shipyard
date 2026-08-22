@@ -1,195 +1,210 @@
-from blessed import Terminal
-from typing import Any
+from typing import Any, Callable, TextIO
+from dataclasses import dataclass
+from enum import StrEnum
 import json
+import sys
 
-from .utils import DictBacked
+from blessed import Terminal
 from .config import config
 
 
-class Colors(DictBacked):
+
+class Style(StrEnum):
     """
-    Concrete terminal colors available to Shipyard's output system.
+    Semantic styles used to classify terminal output.
 
-    Colors represent visual values rather than semantic meanings. Semantic
-    output styles defined by :class:`Style` can use these colors to determine
-    how different types of terminal output are displayed.
-    """
-    
-    def __init__(self) -> None:
-        term = Terminal()
+    Styles describe the purpose of output rather than its concrete visual
+    representation. The associated colors or terminal attributes are resolved
+    separately by Shipyard's output system and may be customized through
+    configuration.
 
-        data = {
-            "black": term.black,
-            "red": term.red,
-            "green": term.green,
-            "yellow": term.yellow,
-            "blue": term.blue,
-            "magenta": term.magenta,
-            "cyan": term.cyan,
-            "white": term.white,
+    Attributes
+    ----------
+    ERROR
+        Used for errors, failures, and other unsuccessful output.
 
-            "bright_black": term.bright_black,
-            "bright_red": term.bright_red,
-            "bright_green": term.bright_green,
-            "bright_yellow": term.bright_yellow,
-            "bright_blue": term.bright_blue,
-            "bright_magenta": term.bright_magenta,
-            "bright_cyan": term.bright_cyan,
-            "bright_white": term.bright_white,
-        }
-        super().__init__(data)
+    SUCCESS
+        Used to indicate that an operation completed successfully.
 
+    WARNING
+        Used for warnings or conditions that require attention.
 
-class Style(DictBacked):
-    """
-    Semantic terminal styles used by Shipyard for formatted output.
+    INFO
+        Used for neutral informational messages.
 
-    Each style represents the purpose of the output rather than a specific
-    color. The default styles provide a consistent visual language for
-    Shipyard and may be customized through configuration.
+    KEY
+        Used for dictionary keys, labels, identifiers, and other structured
+        output names.
 
-    Styles include:
-
-    ``error``
-        Used for failures, invalid input, and unrecoverable errors.
-
-    ``success``
-        Used when an operation completes successfully.
-
-    ``warning``
-        Used for conditions that require attention but do not prevent
-        execution.
-
-    ``info``
-        Used for neutral informational messages and progress information.
-
-    ``key``
-        Used for names, identifiers, configuration keys, and other
-        emphasized labels.
-
-    ``value``
-        Used for values associated with keys or descriptive output.
+    VALUE
+        Used for values associated with keys or structured output data.
     """
 
-    def __init__(self, colors: Colors) -> None:
-        data = {
-            "error": colors.red,
-            "success": colors.green,
-            "warning": colors.yellow,
-            "info": colors.cyan,
-            "key": colors.cyan,
-            "value": colors.white,
-        }
-
-        super().__init__(data)
+    ERROR = "error"
+    SUCCESS = "success"
+    WARNING = "warning"
+    INFO = "info"
+    KEY = "key"
+    VALUE = "value"
 
 
-style: Style = Style()
-color: Colors = Colors()
-reset = Terminal().normal
+StyleFunction = Callable[[str], str]
+term = Terminal()
+
+_styles: dict[Style, StyleFunction] = {
+    Style.ERROR: term.red,
+    Style.SUCCESS: term.green,
+    Style.WARNING: term.yellow,
+    Style.INFO: term.cyan,
+    Style.KEY: term.cyan,
+    Style.VALUE: term.white,
+}
 
 
-
-class OutputFormatter:
+@dataclass(frozen=True, slots=True)
+class Styled:
     """
-    Format command results for human-readable or JSON output.
+    Text explicitly associated with a semantic terminal style.
     """
 
-    def __init__(self) -> None:
-        self.term = Terminal()
-        self.no_color = config.get_flag(
-            "settings.no-color"
-        )
-    
-    def format(self, data: Any) -> str:
-        """
-        Format command data as human-readable text.
-        """
-        if isinstance(data, str):
-            return data
+    text: str
+    style: Style
 
-        if isinstance(data, dict):
-            return self._format_dict(data)
 
-        return str(data)
 
-    def json(self, data: Any) -> str:
-        """
-        Serialize command data as JSON without presentation formatting.
-        """
-        if isinstance(data, str):
-            data = {"output": data}
+def styled(text: str, style: Style) -> Styled:
+    """
+    Create styled terminal output data.
+    """
+    return Styled(text, style)
 
+
+def update_styles(colors: dict[str, str]) -> None:
+    """
+    Update semantic styles from configured color names.
+
+    Unknown style names are ignored. Invalid terminal colors raise
+    ``ValueError``.
+    """
+    for name, color in colors.items():
         try:
-            return json.dumps(data, indent=2, ensure_ascii=False)
-        except (TypeError, ValueError):
-            return json.dumps(
-                {"output": str(data)},
-                indent=2,
-                ensure_ascii=False,
-            )
+            semantic_style = Style(name)
+        except ValueError:
+            continue
 
-    def _format_dict(self, data: dict) -> str:
-        """
-        Format a dictionary as readable terminal output.
-        """
+        formatter = getattr(term, color, None)
+
+        if formatter is None or not callable(formatter):
+            raise ValueError(f"unknown terminal color: {color!r}")
+
+        _styles[semantic_style] = formatter
+
+
+def apply_style(value: str, style: Style) -> str:
+    """
+    Apply the configured terminal formatter for a semantic style.
+    """
+    return _styles[style](value)
+
+
+def _format_value(value: Any, level: int = 0) -> list[str]:
+    indent = "  " * level
+
+    if isinstance(value, Styled):
+        return [apply_style(value.text, value.style)]
+
+    if isinstance(value, dict):
         lines = []
 
-        for key, value in data.items():
-            lines.extend(self._format_value(key, value))
-
-        return "\n".join(lines)
-
-    def _format_value(
-        self,
-        key: str,
-        value: Any,
-        level: int = 0,
-    ) -> list[str]:
-        """
-        Format one dictionary value recursively.
-        """
-        indent = "  " * level
-
-        if isinstance(value, dict):
-            lines = [f"{indent}{self._key(key)}:"]
-            for child_key, child_value in value.items():
-                lines.extend(
-                    self._format_value(
-                        child_key,
-                        child_value,
-                        level + 1,
-                    )
+        for key, child in value.items():
+            lines.extend(
+                _format_mapping_item(
+                    key,
+                    child,
+                    level,
                 )
-            return lines
+            )
 
-        if isinstance(value, list):
-            lines = [f"{indent}{self._key(key)}:"]
+        return lines
 
-            for item in value:
-                if isinstance(item, dict):
-                    lines.append(f"{indent}  -")
+    if isinstance(value, list):
+        lines = []
 
-                    for child_key, child_value in item.items():
-                        lines.extend(
-                            self._format_value(
-                                child_key,
-                                child_value,
-                                level + 2,
-                            )
-                        )
-                else:
-                    lines.append(f"{indent}  - {item}")
+        for item in value:
+            if isinstance(item, dict):
+                lines.append(f"{indent}-")
+                lines.extend(_format_value(item, level + 1))
+            else:
+                lines.append(
+                    f"{indent}- {item}"
+                )
 
-            return lines
+        return lines
 
-        return [f"{indent}{self._key(key)}: {value}"]
+    return [f"{indent}{value}"]
 
-    def _key(self, key: str) -> str:
-        """
-        Format a dictionary key for terminal output.
-        """
-        if self.no_color:
-            return key
 
-        return f"{self.term.cyan}{self.term.bold}{key}{self.term.normal}"
+def _format_mapping_item(
+    key: str,
+    value: Any,
+    level: int,
+) -> list[str]:
+    indent = "  " * level
+
+    key_text = apply_style(
+        str(key),
+        Style.KEY,
+    )
+
+    if isinstance(value, dict):
+        lines = [f"{indent}{key_text}:"]
+
+        for child_key, child_value in value.items():
+            lines.extend(
+                _format_mapping_item(
+                    child_key,
+                    child_value,
+                    level + 1,
+                )
+            )
+
+        return lines
+
+    if isinstance(value, Styled):
+        return [
+            f"{indent}{key_text}: "
+            f"{apply_style(value.text, value.style)}"
+        ]
+
+    return [
+        f"{indent}{key_text}: "
+        f"{apply_style(str(value), Style.VALUE)}"
+    ]
+
+
+def print_output(
+    data: Any,
+    stream: TextIO = sys.stdout,
+) -> None:
+    """
+    Render command output according to Shipyard's active configuration.
+
+    Normal dictionaries and collections are formatted automatically.
+    Explicit ``Styled`` values use their semantic style. JSON output skips
+    terminal styling and serializes the underlying data.
+    """
+    if config.get_flag("settings.only-json"):
+        print(
+            json.dumps(
+                _to_plain_data(data),
+                indent=2,
+                ensure_ascii=False,
+            ),
+            file=stream,
+        )
+        return
+
+    print(
+        "\n".join(_format_value(data)),
+        file=stream,
+    )

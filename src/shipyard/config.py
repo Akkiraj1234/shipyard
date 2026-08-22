@@ -48,6 +48,22 @@ changelog = "CHANGELOG.md"
 auto_sync = false
 no-color = false
 only-json = false
+
+[styles]
+error = "red"
+success = "green"
+warning = "yellow"
+info = "cyan"
+key = "cyan"
+value = "white"
+
+# can also use hax decimal
+# error = "#FF5555"
+# success = "#50FA7B"
+# warning = "#F1FA8C"
+# info = "#8BE9FD"
+# key = "#BD93F9"
+# value = "#F8F8F2"
 """
 
 RECURSIVE_CONFIG_SEARCH = 5

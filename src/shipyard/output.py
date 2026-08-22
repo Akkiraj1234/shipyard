@@ -68,8 +68,6 @@ def _get_formatter(color: str) -> Callable | None:
             value = term.color_hex(color)
         except Exception:
             value = None
-        
-    
     
     value = getattr(term, color, None)
 
